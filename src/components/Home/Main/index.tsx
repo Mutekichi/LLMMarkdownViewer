@@ -1,7 +1,10 @@
-import { HStack, Textarea } from '@chakra-ui/react';
+import { VStack } from '@chakra-ui/react';
 import { FC, useState } from 'react';
+import { useMockOpenai } from '../../../hooks/useMockOpenai';
+import { OpenaiModel } from '../../../hooks/useOpenai';
+import CustomTextInput from '../../CustomInput';
 import MarkdownViewer from '../../MarkdownViewer';
-import styles from './Main.module.scss';
+import { Message } from '../Message';
 
 const complicatedMarkdownText = `
 # Markdown記法サンプル
@@ -34,30 +37,39 @@ def hello():
 |:-----|:------:|------:|
 | 1    | 2      | 3     |
 | 4    | 5      | 6     |
-
-
 `;
 
 const Main: FC = () => {
   const [inputText, setInputText] = useState('');
-  const [errorMessages, setErrorMessages] = useState<string>('');
+  // const [errorMessages, setErrorMessages] = useState<string>('');
+  const {
+    output,
+    isLoading,
+    error,
+    streamResponse,
+    clearOutput,
+    stopGeneration,
+    setStopGeneration,
+    messages,
+    // } = useOpenai();
+  } = useMockOpenai();
 
   return (
-    <div className={styles.content}>
-      {/* <div className={styles.model}>
-        <Icosahedron isActivated />
-      </div>
-      <div className={styles.input}>
-        <CustomTextInput
-          placeholder="Your imagination is the limit..."
-          onChange={(value) => setInputText(value)}
-          onButtonClick={(value) => {}}
-        />
-      </div> */}
-      <HStack>
-        <MarkdownViewer markdown={complicatedMarkdownText} />
-      </HStack>
-    </div>
+    <VStack>
+      {false && <MarkdownViewer markdown={complicatedMarkdownText} />}
+      <VStack>
+        {messages.map((message, index) => (
+          <Message key={index} message={message.content} />
+        ))}
+      </VStack>
+      <CustomTextInput
+        placeholder="Your imagination is the limit..."
+        onChange={(value) => setInputText(value)}
+        onButtonClick={(value) => {
+          streamResponse(value, OpenaiModel.GPT4);
+        }}
+      />
+    </VStack>
   );
 };
 
@@ -71,34 +83,4 @@ const checkInputIncludesOnlyAvailableCharacters = (
   inputText: string,
 ): boolean => {
   return /^[a-zA-Z0-9!@#$%^&*()_+\-=\[\]{};':"\\|,.<>\/? \n]*$/.test(inputText);
-};
-
-const Message: FC<{ message: string }> = ({ message }) => {
-  return (
-    <Textarea
-      value={message}
-      marginLeft="20px"
-      width="100%"
-      border="none"
-      backgroundColor="transparent"
-      fontSize="1.5rem"
-      fontFamily="'Roboto Mono', monospace"
-      resize="none"
-      overflow="hidden"
-      color="#ff0000"
-      _placeholder={{ color: 'gray.500' }}
-      _focus={{ outline: 'none' }}
-      sx={{
-        '&::-webkit-scrollbar': {
-          width: '0px',
-        },
-        lineHeight: '32px',
-        letterSpacing: '0.02em',
-      }}
-    />
-  );
-};
-
-const ErrorMessages: FC = () => {
-  return <div>Failed to generate model.</div>;
 };

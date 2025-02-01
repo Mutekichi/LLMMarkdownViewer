@@ -20,7 +20,7 @@ const PreTag = ({ children, ...props }: any) => (
 
 const MarkdownViewer: FC<MarkdownViewerProps> = ({ markdown }) => {
   return (
-    <Box>
+    <Box w={{ base: '100%', md: '50%' }} p={4} bg="gray.100">
       <ReactMarkdown
         remarkPlugins={[remarkGfm, remarkMath]}
         rehypePlugins={[rehypeKatex]}
