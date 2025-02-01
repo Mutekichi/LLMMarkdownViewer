@@ -1,10 +1,42 @@
-import { Textarea } from '@chakra-ui/react';
+import { HStack, Textarea } from '@chakra-ui/react';
 import { FC, useState } from 'react';
-import CustomTextInput from '../../CustomInput';
-import Icosahedron from '../../Icosahedron';
+import MarkdownViewer from '../../MarkdownViewer';
 import styles from './Main.module.scss';
 
-const abled_status = ['not_started', 'requesting', 'completed', 'error'];
+const complicatedMarkdownText = `
+# Markdown記法サンプル
+
+## テキストスタイル
+**太字テキスト**
+*イタリック*
+~~打ち消し線~~
+\`インラインコード\`
+
+## リンク
+[Google](https://www.google.com)
+
+## リスト
+- 項目1
+  - ネスト項目1-1
+  - ネスト項目1-2
+
+## Math
+$\\frac{1}{2}$ + $\\frac{1}{3}$ = $\\frac{5}{6}$ のように、数式を記述できます。
+
+## コードブロック
+\`\`\`python
+def hello():
+   print("Hello, World!")
+\`\`\`
+
+## テーブル
+| Left | Center | Right |
+|:-----|:------:|------:|
+| 1    | 2      | 3     |
+| 4    | 5      | 6     |
+
+
+`;
 
 const Main: FC = () => {
   const [inputText, setInputText] = useState('');
@@ -12,7 +44,7 @@ const Main: FC = () => {
 
   return (
     <div className={styles.content}>
-      <div className={styles.model}>
+      {/* <div className={styles.model}>
         <Icosahedron isActivated />
       </div>
       <div className={styles.input}>
@@ -21,7 +53,10 @@ const Main: FC = () => {
           onChange={(value) => setInputText(value)}
           onButtonClick={(value) => {}}
         />
-      </div>
+      </div> */}
+      <HStack>
+        <MarkdownViewer markdown={complicatedMarkdownText} />
+      </HStack>
     </div>
   );
 };
