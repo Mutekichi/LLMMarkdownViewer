@@ -1,0 +1,43 @@
+{
+  "name": "modelmakerfrontend",
+  "version": "1.0.0",
+  "description": "Frontend for ModelMaker",
+  "main": "index.js",
+  "license": "MIT",
+  "dependencies": {
+    "@chakra-ui/icons": "^2.1.1",
+    "@chakra-ui/react": "^2.8.2",
+    "@emotion/react": "^11.11.4",
+    "@emotion/styled": "^11.11.5",
+    "@react-three/drei": "^9.111.2",
+    "@react-three/fiber": "^8.17.5",
+    "@tanstack/react-query": "^5.52.0",
+    "axios": "^1.7.4",
+    "framer-motion": "^11.3.29",
+    "next": "^14.2.5",
+    "react": "^18.3.1",
+    "react-dom": "^18.3.1",
+    "react-icons": "^5.2.1",
+    "react-markdown": "^9.0.3",
+    "react-three": "^0.9.7",
+    "react-tsparticles": "^2.12.2",
+    "sass": "^1.77.8",
+    "three": "^0.167.1",
+    "three-stdlib": "^2.32.2",
+    "tsparticles": "^3.5.0",
+    "tsparticles-engine": "^2.12.0"
+  },
+  "scripts": {
+    "dev": "next dev -p 3010",
+    "build": "next build",
+    "start": "next start",
+    "lint": "next lint",
+    "format:prettier": "prettier --write ./src"
+  },
+  "devDependencies": {
+    "@types/node": "18.11.9",
+    "@types/react": "^18.3.3",
+    "prettier": "2.7.1",
+    "typescript": "^5.5.4"
+  }
+}
