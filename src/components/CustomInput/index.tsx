@@ -1,5 +1,5 @@
-import React, { useState, useRef, useEffect } from 'react';
-import { Textarea, Box } from '@chakra-ui/react';
+import { Box, Textarea } from '@chakra-ui/react';
+import React, { useEffect, useRef, useState } from 'react';
 
 interface CustomTextInputProps {
   placeholder?: string;
@@ -28,7 +28,7 @@ const CustomTextInput: React.FC<CustomTextInputProps> = (props) => {
   const [lines, setLines] = useState(1);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
 
-  const LINE_HEIGHT = 32;
+  const LINE_HEIGHT = 28;
   const DEFAULT_HEIGHT = LINE_HEIGHT;
   const BUTTON_WIDTH = 40;
 
@@ -66,7 +66,7 @@ const CustomTextInput: React.FC<CustomTextInputProps> = (props) => {
 
   return (
     <Box
-      width="560px"
+      width="100%"
       height={`${Math.max(lines, 3) * LINE_HEIGHT}px`}
       borderRadius="50px"
       borderWidth="4px"
@@ -87,7 +87,7 @@ const CustomTextInput: React.FC<CustomTextInputProps> = (props) => {
         placeholder={placeholder}
         disabled={inputDisabled}
         width={`calc(100% - ${BUTTON_WIDTH + 50}px)`}
-        marginLeft="20px"
+        marginLeft="30px"
         border="none"
         backgroundColor="transparent"
         color={inputDisabled ? C_PENDING : C_DEFAULT}

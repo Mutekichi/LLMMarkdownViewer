@@ -6,12 +6,44 @@ export const MOCK_RESPONSES = {
   GREETING:
     'こんにちは！私はAIアシスタントです。どのようなお手伝いができますか？',
   ERROR: 'エラーが発生しました。申し訳ありません。',
+  MARKDOWN: `
+# Markdown記法サンプル
+
+## テキストスタイル
+**太字テキスト**
+*イタリック*
+~~打ち消し線~~
+\`インラインコード\`
+
+## リンク
+[Google](https://www.google.com)
+
+## リスト
+- 項目1
+  - ネスト項目1-1
+  - ネスト項目1-2
+
+## Math
+$\\frac{1}{2}$ + $\\frac{1}{3}$ = $\\frac{5}{6}$ のように、数式を記述できます。
+
+## コードブロック
+\`\`\`python
+def hello():
+   print("Hello, World!")
+\`\`\`
+
+## テーブル
+| Left | Center | Right |
+|:-----|:------:|------:|
+| 1    | 2      | 3     |
+| 4    | 5      | 6     |
+`,
   // 必要に応じて他の定型文を追加
 };
 
 // 遅延時間の設定（ミリ秒）
-const MOCK_STREAM_DELAY = 10; // 文字送り速度
-const MOCK_INITIAL_DELAY = 0; // レスポンス開始までの遅延
+const MOCK_STREAM_DELAY = 50; // 文字送り速度
+const MOCK_INITIAL_DELAY = 20; // レスポンス開始までの遅延
 
 export const useMockOpenai = (): UseOpenaiReturn => {
   const [output, setOutput] = useState<string>('');
@@ -42,7 +74,7 @@ export const useMockOpenai = (): UseOpenaiReturn => {
         // 初期遅延
         await new Promise((resolve) => setTimeout(resolve, MOCK_INITIAL_DELAY));
 
-        const mockResponse = MOCK_RESPONSES.GREETING;
+        const mockResponse = MOCK_RESPONSES.MARKDOWN;
         let fullResponse = '';
 
         // 文字送りのシミュレーション
