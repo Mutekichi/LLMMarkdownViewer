@@ -1,11 +1,9 @@
-import { Box, Center, Text, VStack } from '@chakra-ui/react';
+import { Box, Center, HStack, VStack } from '@chakra-ui/react';
 import { FC, useState } from 'react';
-import {
-  OpenaiMessage,
-  OpenaiModel,
-  useOpenai,
-} from '../../../hooks/useOpenai';
+import { useMockOpenai } from '../../../hooks/useMockOpenai';
+import { OpenaiMessage, OpenaiModel } from '../../../hooks/useOpenai';
 import CustomTextInput from '../../CustomInput';
+import { PopoverSelect, PopoverSelectOption } from '../../PopoverSelect';
 import { MessageHistory } from '../MessageHistory';
 
 const Main: FC = () => {
@@ -19,8 +17,18 @@ const Main: FC = () => {
     stopGeneration,
     setStopGeneration,
     messages,
-  } = useOpenai();
-  // } = useMockOpenai();
+    // } = useOpenai();
+  } = useMockOpenai();
+  const [isOpen, setIsOpen] = useState(false);
+
+  const [model, setModel] = useState<OpenaiModel>(OpenaiModel.GPT4o);
+
+  const modelOptions: PopoverSelectOption<OpenaiModel>[] = [
+    { value: OpenaiModel.GPT4, label: 'ChatGPT 4' },
+    { value: OpenaiModel.GPT4o, label: 'ChatGPT 4 Optimized' },
+    { value: OpenaiModel.o1, label: 'Claude 3 Opus' },
+    { value: OpenaiModel.o1mini, label: 'Claude 3 Opus Mini' },
+  ];
 
   return (
     <VStack
@@ -46,12 +54,22 @@ const Main: FC = () => {
             onChange={(value) => setInputText(value)}
             onButtonClick={(value) => {
               streamResponse(value, OpenaiModel.GPT4o);
+              setInputText('');
             }}
             buttonDisabled={!checkInputLength(inputText)}
             inputDisabled={isLoading}
           />
         </Center>
-        <Text> hogehgoe </Text>
+        <HStack w="80%">
+          <PopoverSelect
+            options={modelOptions}
+            value={model}
+            onChange={setModel}
+            isOpen={isOpen}
+            onOpen={() => setIsOpen(true)}
+            onClose={() => setIsOpen(false)}
+          />
+        </HStack>
       </VStack>
     </VStack>
   );
