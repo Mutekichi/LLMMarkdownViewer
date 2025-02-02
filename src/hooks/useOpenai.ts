@@ -1,22 +1,15 @@
 import OpenAI from 'openai';
 import { useCallback, useEffect, useState } from 'react';
+import {
+  OPENAI_MODEL_API_NAMES,
+  OpenaiMessage,
+  OpenaiModelType,
+} from '../config/llm-models';
 
 const openai = new OpenAI({
   apiKey: process.env.NEXT_PUBLIC_OPENAI_API_KEY,
   dangerouslyAllowBrowser: true,
 });
-
-export enum OpenaiModel {
-  GPT4o = 'gpt-4o',
-  o1 = 'o1',
-  o1mini = 'o1-mini',
-  o3mini = 'o3-mini',
-}
-
-export interface OpenaiMessage {
-  role: 'system' | 'user' | 'assistant';
-  content: string;
-}
 
 export interface UseOpenaiReturn {
   output: string;
@@ -24,7 +17,7 @@ export interface UseOpenaiReturn {
   error: string | null;
   streamResponse: (
     prompt: string,
-    model: OpenaiModel,
+    model: OpenaiModelType,
     image?: File,
   ) => Promise<void>;
   clearOutput: () => void;
@@ -68,7 +61,7 @@ export const useOpenai = (): UseOpenaiReturn => {
   }, [systemPrompt]);
 
   const streamResponse = useCallback(
-    async (prompt: string, model: OpenaiModel, image?: File) => {
+    async (prompt: string, model: OpenaiModelType, image?: File) => {
       try {
         setIsLoading(true);
         setError(null);
@@ -82,7 +75,7 @@ export const useOpenai = (): UseOpenaiReturn => {
         setMessages(newMessages);
 
         let payload: any = {
-          model: model,
+          model: OPENAI_MODEL_API_NAMES[model],
           messages: newMessages,
           stream: true,
           stream_options: {

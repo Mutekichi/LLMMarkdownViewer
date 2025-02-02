@@ -1,6 +1,6 @@
 import { Box, HStack, VStack } from '@chakra-ui/react';
 import { FC } from 'react';
-import { OpenaiMessage } from '../../../hooks/useOpenai';
+import { OpenaiMessage } from '../../../config/llm-models';
 import { Message } from '../Message/index';
 
 interface MessageHistoryProps {

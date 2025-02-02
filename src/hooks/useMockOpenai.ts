@@ -1,5 +1,5 @@
 import { useCallback, useState } from 'react';
-import { OpenaiMessage, OpenaiModel, UseOpenaiReturn } from './useOpenai';
+import { OpenaiMessage, OpenaiModelType, UseOpenaiReturn } from './useOpenai';
 
 // モック用の定数
 export const MOCK_RESPONSES = {
@@ -55,7 +55,7 @@ export const useMockOpenai = (): UseOpenaiReturn => {
   }, []);
 
   const streamResponse = useCallback(
-    async (prompt: string, model: OpenaiModel, image?: File) => {
+    async (prompt: string, model: OpenaiModelType, image?: File) => {
       try {
         setIsLoading(true);
         setError(null);

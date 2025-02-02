@@ -1,10 +1,21 @@
 import { Box, Center, HStack, VStack } from '@chakra-ui/react';
 import { FC, useState } from 'react';
-import { useMockOpenai } from '../../../hooks/useMockOpenai';
-import { OpenaiMessage, OpenaiModel } from '../../../hooks/useOpenai';
+import {
+  OPENAI_MODEL_DISPLAY_NAMES,
+  OpenaiMessage,
+  OpenaiModelType,
+} from '../../../config/llm-models';
+import { useOpenai } from '../../../hooks/useOpenai';
 import CustomTextInput from '../../CustomInput';
 import { PopoverSelect, PopoverSelectOption } from '../../PopoverSelect';
 import { MessageHistory } from '../MessageHistory';
+
+const createModelOptions = (): PopoverSelectOption<OpenaiModelType>[] => {
+  return Object.entries(OPENAI_MODEL_DISPLAY_NAMES).map(([value, label]) => ({
+    value: value as OpenaiModelType,
+    label,
+  }));
+};
 
 const Main: FC = () => {
   const [inputText, setInputText] = useState('');
@@ -17,20 +28,13 @@ const Main: FC = () => {
     stopGeneration,
     setStopGeneration,
     messages,
-    // } = useOpenai();
-  } = useMockOpenai();
+  } = useOpenai();
+  // } = useMockOpenai();
   // } = useClaude();
 
   const [isOpen, setIsOpen] = useState(false);
 
-  const [model, setModel] = useState<OpenaiModel>(OpenaiModel.GPT4o);
-
-  const modelOptions: PopoverSelectOption<OpenaiModel>[] = [
-    { value: OpenaiModel.GPT4o, label: 'GPT-4o' },
-    { value: OpenaiModel.o1, label: 'o1' },
-    { value: OpenaiModel.o1mini, label: 'o1-mini' },
-    { value: OpenaiModel.o3mini, label: 'o3-mini' },
-  ];
+  const [model, setModel] = useState<OpenaiModelType>(OpenaiModelType.GPT4o);
 
   return (
     <VStack
@@ -67,7 +71,7 @@ const Main: FC = () => {
         </Center>
         <HStack w="80%">
           <PopoverSelect
-            options={modelOptions}
+            options={createModelOptions()}
             value={model}
             onChange={setModel}
             isOpen={isOpen}
