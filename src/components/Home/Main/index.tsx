@@ -1,10 +1,7 @@
 import { Box, Center, HStack, VStack } from '@chakra-ui/react';
 import { FC, useState } from 'react';
-import {
-  OpenaiMessage,
-  OpenaiModel,
-  useOpenai,
-} from '../../../hooks/useOpenai';
+import { useMockOpenai } from '../../../hooks/useMockOpenai';
+import { OpenaiMessage, OpenaiModel } from '../../../hooks/useOpenai';
 import CustomTextInput from '../../CustomInput';
 import { PopoverSelect, PopoverSelectOption } from '../../PopoverSelect';
 import { MessageHistory } from '../MessageHistory';
@@ -20,14 +17,15 @@ const Main: FC = () => {
     stopGeneration,
     setStopGeneration,
     messages,
-  } = useOpenai();
-  // } = useMockOpenai();
+    // } = useOpenai();
+  } = useMockOpenai();
+  // } = useClaude();
+
   const [isOpen, setIsOpen] = useState(false);
 
   const [model, setModel] = useState<OpenaiModel>(OpenaiModel.GPT4o);
 
   const modelOptions: PopoverSelectOption<OpenaiModel>[] = [
-    { value: OpenaiModel.GPT4, label: 'GPT-4' },
     { value: OpenaiModel.GPT4o, label: 'GPT-4o' },
     { value: OpenaiModel.o1, label: 'o1' },
     { value: OpenaiModel.o1mini, label: 'o1-mini' },
@@ -42,6 +40,8 @@ const Main: FC = () => {
       spacing={8}
       justify="space-between"
       bgColor="#f5f5f5"
+      boxSizing="border-box"
+      py={8}
     >
       <Box h="50" />
       <VStack flex="1" overflowY="auto" w="100%" pb="40">
@@ -57,7 +57,8 @@ const Main: FC = () => {
           <CustomTextInput
             onChange={(value) => setInputText(value)}
             onButtonClick={(value) => {
-              streamResponse(value, OpenaiModel.GPT4o);
+              streamResponse(value, OpenaiModel.o1mini);
+              // streamResponse(value, ClaudeModel.OPUS);
               setInputText('');
             }}
             buttonDisabled={!checkInputLength(inputText)}
@@ -73,6 +74,7 @@ const Main: FC = () => {
             onOpen={() => setIsOpen(true)}
             onClose={() => setIsOpen(false)}
           />
+          <div>{error}</div>
         </HStack>
       </VStack>
     </VStack>

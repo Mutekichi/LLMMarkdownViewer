@@ -7,7 +7,6 @@ const openai = new OpenAI({
 });
 
 export enum OpenaiModel {
-  GPT4 = 'gpt-4',
   GPT4o = 'gpt-4o',
   o1 = 'o1',
   o1mini = 'o1-mini',
