@@ -1,7 +1,10 @@
 import { Box, Center, HStack, VStack } from '@chakra-ui/react';
 import { FC, useState } from 'react';
-import { useMockOpenai } from '../../../hooks/useMockOpenai';
-import { OpenaiMessage, OpenaiModel } from '../../../hooks/useOpenai';
+import {
+  OpenaiMessage,
+  OpenaiModel,
+  useOpenai,
+} from '../../../hooks/useOpenai';
 import CustomTextInput from '../../CustomInput';
 import { PopoverSelect, PopoverSelectOption } from '../../PopoverSelect';
 import { MessageHistory } from '../MessageHistory';
@@ -17,17 +20,18 @@ const Main: FC = () => {
     stopGeneration,
     setStopGeneration,
     messages,
-    // } = useOpenai();
-  } = useMockOpenai();
+  } = useOpenai();
+  // } = useMockOpenai();
   const [isOpen, setIsOpen] = useState(false);
 
   const [model, setModel] = useState<OpenaiModel>(OpenaiModel.GPT4o);
 
   const modelOptions: PopoverSelectOption<OpenaiModel>[] = [
-    { value: OpenaiModel.GPT4, label: 'ChatGPT 4' },
-    { value: OpenaiModel.GPT4o, label: 'ChatGPT 4 Optimized' },
-    { value: OpenaiModel.o1, label: 'Claude 3 Opus' },
-    { value: OpenaiModel.o1mini, label: 'Claude 3 Opus Mini' },
+    { value: OpenaiModel.GPT4, label: 'GPT-4' },
+    { value: OpenaiModel.GPT4o, label: 'GPT-4o' },
+    { value: OpenaiModel.o1, label: 'o1' },
+    { value: OpenaiModel.o1mini, label: 'o1-mini' },
+    { value: OpenaiModel.o3mini, label: 'o3-mini' },
   ];
 
   return (
@@ -48,7 +52,7 @@ const Main: FC = () => {
           streamingMessage={output}
         />
       </VStack>
-      <VStack w="100%" spacing={0} justify="space-between" bgColor="#f5f5f5">
+      <VStack w="100%" spacing={8} justify="space-between" bgColor="#f5f5f5">
         <Center w="80%">
           <CustomTextInput
             onChange={(value) => setInputText(value)}

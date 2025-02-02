@@ -1,5 +1,6 @@
-import { Button } from '@chakra-ui/button';
-import { VStack } from '@chakra-ui/layout';
+import { Button, ButtonProps } from '@chakra-ui/button';
+import { ChevronDownIcon, ChevronUpIcon } from '@chakra-ui/icons';
+import { Text, VStack } from '@chakra-ui/layout';
 import {
   Popover,
   PopoverBody,
@@ -35,13 +36,35 @@ export const PopoverSelect: FC<PopoverSelectProps<any>> = ({
   return (
     <Popover isOpen={isOpen} onClose={onClose}>
       <PopoverTrigger>
-        <Button onClick={onOpen}>{currentLabel}</Button>
+        <Button
+          pr={20}
+          pl={30}
+          py={4}
+          h="60px"
+          border="none"
+          borderRadius="40"
+          bg="#f5f5f5"
+          _hover={{ bg: '#e8e8e8' }}
+          onClick={onOpen}
+          display="flex"
+          justifyContent="space-between"
+          alignItems="center"
+          cursor="pointer"
+          minW="300px"
+        >
+          <Text fontSize="1rem">{currentLabel}</Text>
+          {isOpen ? (
+            <ChevronDownIcon boxSize={20} />
+          ) : (
+            <ChevronUpIcon boxSize={20} />
+          )}
+        </Button>
       </PopoverTrigger>
       <PopoverContent>
         <PopoverBody>
-          <VStack spacing={2}>
+          <VStack spacing={0}>
             {options.map((option) => (
-              <Button
+              <PopoverSelectButton
                 key={option.value}
                 w="full"
                 variant="ghost"
@@ -52,11 +75,33 @@ export const PopoverSelect: FC<PopoverSelectProps<any>> = ({
                 isActive={value === option.value}
               >
                 {option.label}
-              </Button>
+              </PopoverSelectButton>
             ))}
           </VStack>
         </PopoverBody>
       </PopoverContent>
     </Popover>
+  );
+};
+
+const PopoverSelectButton: FC<ButtonProps> = (props) => {
+  return (
+    <Button
+      // disable default button styles
+      px={20}
+      py={4}
+      h="60px"
+      border="none"
+      borderRadius="4"
+      bg="#fafafa"
+      _hover={{ bg: '#e8e8e8' }}
+      display="flex"
+      justifyContent="space-between"
+      alignItems="center"
+      cursor="pointer"
+      minW="300px"
+      fontSize="1rem"
+      {...props}
+    />
   );
 };

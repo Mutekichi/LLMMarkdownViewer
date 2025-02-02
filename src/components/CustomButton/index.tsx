@@ -1,6 +1,6 @@
-import React from 'react';
-import { Box } from '@chakra-ui/react';
 import { Icon, IconProps } from '@chakra-ui/icons';
+import { Box } from '@chakra-ui/react';
+import React from 'react';
 
 interface CustomButtonProps {
   icon: React.ComponentType<IconProps>;

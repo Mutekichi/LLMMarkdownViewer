@@ -11,6 +11,7 @@ export enum OpenaiModel {
   GPT4o = 'gpt-4o',
   o1 = 'o1',
   o1mini = 'o1-mini',
+  o3mini = 'o3-mini',
 }
 
 export interface OpenaiMessage {
