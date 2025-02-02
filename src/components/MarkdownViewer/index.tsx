@@ -3,10 +3,10 @@ import 'katex/dist/katex.min.css';
 import { FC } from 'react';
 import ReactMarkdown from 'react-markdown';
 import { Prism as SyntaxHighlighter } from 'react-syntax-highlighter';
-// import { darcula } from 'react-syntax-highlighter/dist/esm/styles/prism';
 import rehypeKatex from 'rehype-katex';
 import remarkGfm from 'remark-gfm';
 import remarkMath from 'remark-math';
+import AutoScrollWrapper from '../AutoScrollWrapper';
 
 interface MarkdownViewerProps {
   markdown: string;
@@ -20,7 +20,7 @@ const PreTag = ({ children, ...props }: any) => (
 
 const MarkdownViewer: FC<MarkdownViewerProps> = ({ markdown }) => {
   return (
-    <Box w={{ base: '100%', md: '50%' }} p={4} bg="gray.100">
+    <AutoScrollWrapper dependencies={[markdown]}>
       <ReactMarkdown
         remarkPlugins={[remarkGfm, remarkMath]}
         rehypePlugins={[rehypeKatex]}
@@ -34,7 +34,6 @@ const MarkdownViewer: FC<MarkdownViewerProps> = ({ markdown }) => {
                 // {...rest}
                 children={String(children).replace(/\n$/, '')}
                 language={match[1]}
-                // style={darcula}
               />
             ) : (
               <code {...rest} className={className}>
@@ -44,7 +43,7 @@ const MarkdownViewer: FC<MarkdownViewerProps> = ({ markdown }) => {
           },
         }}
       />
-    </Box>
+    </AutoScrollWrapper>
   );
 };
 

@@ -10,7 +10,8 @@ interface CustomTextInputProps {
   error?: boolean;
 }
 
-const C_DEFAULT = '#00FFFF';
+// const C_DEFAULT = '#00FFFF';
+const C_DEFAULT = '#000000';
 const C_PENDING = '#00FFFF33';
 const C_ERROR = '#FF0000';
 
@@ -91,8 +92,8 @@ const CustomTextInput: React.FC<CustomTextInputProps> = (props) => {
         border="none"
         backgroundColor="transparent"
         color={inputDisabled ? C_PENDING : C_DEFAULT}
-        fontSize="1.5rem"
-        fontFamily="'Roboto Mono', monospace"
+        fontSize="1.2rem"
+        // fontFamily="'Roboto Mono', monospace"
         resize="none"
         overflow="hidden"
         _placeholder={{ color: 'gray.500' }}

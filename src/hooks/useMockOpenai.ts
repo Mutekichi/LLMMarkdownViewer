@@ -9,6 +9,8 @@ export const MOCK_RESPONSES = {
   MARKDOWN: `
 # Markdown記法サンプル
 
+めちゃくちゃ長い文章の表示は、どのようになるのでしょうか？確認したいですよね。今、その長い文章がどのように出力されるかのサンプルとして、この文章が生成されています。このままだと、まだ長さが足りないでしょうか。。。？このくらいあれば十分かと思います。
+
 ## テキストスタイル
 **太字テキスト**
 *イタリック*
@@ -32,17 +34,12 @@ def hello():
    print("Hello, World!")
 \`\`\`
 
-## テーブル
-| Left | Center | Right |
-|:-----|:------:|------:|
-| 1    | 2      | 3     |
-| 4    | 5      | 6     |
 `,
   // 必要に応じて他の定型文を追加
 };
 
 // 遅延時間の設定（ミリ秒）
-const MOCK_STREAM_DELAY = 50; // 文字送り速度
+const MOCK_STREAM_DELAY = 1; // 文字送り速度
 const MOCK_INITIAL_DELAY = 20; // レスポンス開始までの遅延
 
 export const useMockOpenai = (): UseOpenaiReturn => {
@@ -74,7 +71,8 @@ export const useMockOpenai = (): UseOpenaiReturn => {
         // 初期遅延
         await new Promise((resolve) => setTimeout(resolve, MOCK_INITIAL_DELAY));
 
-        const mockResponse = MOCK_RESPONSES.MARKDOWN;
+        const mockResponse =
+          prompt === 'md' ? MOCK_RESPONSES.MARKDOWN : MOCK_RESPONSES.GREETING;
         let fullResponse = '';
 
         // 文字送りのシミュレーション

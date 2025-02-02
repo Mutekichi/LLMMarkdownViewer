@@ -1,9 +1,9 @@
-import { Center, VStack } from '@chakra-ui/react';
+import { Box, Center, Text, VStack } from '@chakra-ui/react';
 import { FC, useState } from 'react';
 import { useMockOpenai } from '../../../hooks/useMockOpenai';
 import { OpenaiModel } from '../../../hooks/useOpenai';
 import CustomTextInput from '../../CustomInput';
-import { Message } from '../Message';
+import { MessageHistory } from '../MessageHistory';
 
 const Main: FC = () => {
   const [inputText, setInputText] = useState('');
@@ -23,27 +23,32 @@ const Main: FC = () => {
     <VStack
       w="100%"
       h="100%"
-      bg="gray"
-      spacing={4}
+      maxH="100%"
+      spacing={8}
       justify="space-between"
-      position="relative"
+      bgColor="#f5f5f5"
     >
-      <VStack>
-        {messages.map((message, index) => (
-          <Message key={index} message={message.content} />
-        ))}
-      </VStack>
-      {isLoading && <Message message={output} />}
-      <Center position="absolute" bottom="10" w="100%">
-        <CustomTextInput
-          onChange={(value) => setInputText(value)}
-          onButtonClick={(value) => {
-            streamResponse(value, OpenaiModel.GPT4);
-          }}
-          buttonDisabled={!checkInputLength(inputText)}
-          inputDisabled={isLoading}
+      <Box h="50" />
+      <VStack flex="1" overflowY="auto" w="100%" pb="40">
+        <MessageHistory
+          messages={messages}
+          streaming={isLoading}
+          streamingMessage={output}
         />
-      </Center>
+      </VStack>
+      <VStack w="100%" spacing={0} justify="space-between" bgColor="#f5f5f5">
+        <Center w="80%">
+          <CustomTextInput
+            onChange={(value) => setInputText(value)}
+            onButtonClick={(value) => {
+              streamResponse(value, OpenaiModel.o1mini);
+            }}
+            buttonDisabled={!checkInputLength(inputText)}
+            inputDisabled={isLoading}
+          />
+        </Center>
+        <Text> hogehoge </Text>
+      </VStack>
     </VStack>
   );
 };

@@ -4,13 +4,21 @@ import MarkdownViewer from '../../MarkdownViewer';
 
 interface MessageProps {
   message: string;
+  bgColor?: string;
+  borderColor?: string;
 }
 
 export const Message: FC<MessageProps> = (props) => {
-  const { message } = props;
+  const { message, bgColor, borderColor } = props;
 
   return (
-    <Box p={2} borderRadius="md">
+    <Box
+      px={12}
+      bg={bgColor}
+      border={borderColor ? `2px solid ${borderColor}` : undefined}
+      borderRadius="20"
+      overflow="hidden"
+    >
       {MarkdownViewer({ markdown: message })}
     </Box>
   );
