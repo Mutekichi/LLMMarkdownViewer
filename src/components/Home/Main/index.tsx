@@ -51,7 +51,7 @@ const Main: FC = () => {
             inputDisabled={isLoading}
           />
         </Center>
-        <Text> ${output} </Text>
+        <Text> hogehgoe </Text>
       </VStack>
     </VStack>
   );

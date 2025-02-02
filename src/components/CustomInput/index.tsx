@@ -41,12 +41,21 @@ const CustomTextInput: React.FC<CustomTextInputProps> = (props) => {
     }
   };
 
+  const handleButtonClick = () => {
+    if (onButtonClick && !buttonDisabled) {
+      onButtonClick(value);
+      clearInput();
+    }
+  };
+
+  const clearInput = () => {
+    setValue('');
+  };
+
   const handleKeyDown = (event: React.KeyboardEvent<HTMLTextAreaElement>) => {
     if (event.key === 'Enter' && !event.shiftKey) {
       event.preventDefault();
-      if (onButtonClick && !buttonDisabled) {
-        onButtonClick(value);
-      }
+      handleButtonClick();
     }
   };
 
@@ -64,6 +73,10 @@ const CustomTextInput: React.FC<CustomTextInputProps> = (props) => {
   useEffect(() => {
     adjustTextareaHeight();
   }, [value]);
+
+  useEffect(() => {
+    textareaRef.current?.focus();
+  }, [inputDisabled]);
 
   return (
     <Box
@@ -93,7 +106,6 @@ const CustomTextInput: React.FC<CustomTextInputProps> = (props) => {
         backgroundColor="transparent"
         color={inputDisabled ? C_PENDING : C_DEFAULT}
         fontSize="1.2rem"
-        // fontFamily="'Roboto Mono', monospace"
         resize="none"
         overflow="hidden"
         _placeholder={{ color: 'gray.500' }}
@@ -109,7 +121,7 @@ const CustomTextInput: React.FC<CustomTextInputProps> = (props) => {
       <Box
         as="button"
         aria-label="Send message"
-        onClick={() => onButtonClick && onButtonClick(value)}
+        onClick={handleButtonClick}
         disabled={buttonDisabled}
         position="absolute"
         right="20px"

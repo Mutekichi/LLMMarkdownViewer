@@ -11,17 +11,18 @@ interface MessageHistoryProps {
 
 const colors = {
   user: {
-    bgColor: '#e6e6e6',
-    borderColor: undefined,
+    bgColor: '#eeeeee',
+    borderColor: '#cccccc',
   },
   assistant: {
-    bgColor: '#00ffff11',
-    borderColor: '#00ffff33',
+    bgColor: undefined,
+    borderColor: '#cccccc',
   },
 };
 
 export const MessageHistory: FC<MessageHistoryProps> = (props) => {
   const { messages, streaming, streamingMessage } = props;
+
   return (
     <VStack
       align="stretch"
