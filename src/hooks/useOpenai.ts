@@ -1,10 +1,8 @@
 import OpenAI from 'openai';
-import { useCallback, useState } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 
 const openai = new OpenAI({
   apiKey: process.env.NEXT_PUBLIC_OPENAI_API_KEY,
-  // call the API directly from the browser
-  // TODO: deploy an intermediate server to call the API
   dangerouslyAllowBrowser: true,
 });
 
@@ -16,7 +14,7 @@ export enum OpenaiModel {
 }
 
 export interface OpenaiMessage {
-  role: 'user' | 'assistant';
+  role: 'system' | 'user' | 'assistant';
   content: string;
 }
 
@@ -41,11 +39,33 @@ export const useOpenai = (): UseOpenaiReturn => {
   const [error, setError] = useState<string | null>(null);
   const [stopGeneration, setStopGeneration] = useState<boolean>(false);
   const [messages, setMessages] = useState<OpenaiMessage[]>([]);
+  const [systemPrompt, setSystemPrompt] = useState<string>('');
+
+  useEffect(() => {
+    const loadSystemPrompt = async () => {
+      try {
+        const response = await fetch('/prompts/system.txt');
+        if (!response.ok) {
+          throw new Error('Failed to load system prompt');
+        }
+        const prompt = await response.text();
+        setSystemPrompt(prompt);
+        setMessages([{ role: 'system', content: prompt }]);
+      } catch (err) {
+        setError(
+          err instanceof Error ? err.message : 'Failed to load system prompt',
+        );
+      }
+    };
+
+    loadSystemPrompt();
+  }, []);
 
   const clearOutput = useCallback(() => {
     setOutput('');
     setError(null);
-  }, []);
+    setMessages([{ role: 'system', content: systemPrompt }]);
+  }, [systemPrompt]);
 
   const streamResponse = useCallback(
     async (prompt: string, model: OpenaiModel, image?: File) => {

@@ -1,7 +1,10 @@
 import { Box, Center, Text, VStack } from '@chakra-ui/react';
 import { FC, useState } from 'react';
-import { useMockOpenai } from '../../../hooks/useMockOpenai';
-import { OpenaiModel } from '../../../hooks/useOpenai';
+import {
+  OpenaiMessage,
+  OpenaiModel,
+  useOpenai,
+} from '../../../hooks/useOpenai';
 import CustomTextInput from '../../CustomInput';
 import { MessageHistory } from '../MessageHistory';
 
@@ -16,8 +19,8 @@ const Main: FC = () => {
     stopGeneration,
     setStopGeneration,
     messages,
-    // } = useOpenai();
-  } = useMockOpenai();
+  } = useOpenai();
+  // } = useMockOpenai();
 
   return (
     <VStack
@@ -31,7 +34,8 @@ const Main: FC = () => {
       <Box h="50" />
       <VStack flex="1" overflowY="auto" w="100%" pb="40">
         <MessageHistory
-          messages={messages}
+          messages={excludeSystemMessages(messages)}
+          // messages={messages}
           streaming={isLoading}
           streamingMessage={output}
         />
@@ -41,19 +45,23 @@ const Main: FC = () => {
           <CustomTextInput
             onChange={(value) => setInputText(value)}
             onButtonClick={(value) => {
-              streamResponse(value, OpenaiModel.o1mini);
+              streamResponse(value, OpenaiModel.GPT4o);
             }}
             buttonDisabled={!checkInputLength(inputText)}
             inputDisabled={isLoading}
           />
         </Center>
-        <Text> hogehoge </Text>
+        <Text> ${output} </Text>
       </VStack>
     </VStack>
   );
 };
 
 export default Main;
+
+const excludeSystemMessages = (messages: OpenaiMessage[]): OpenaiMessage[] => {
+  return messages.filter((message) => message.role !== 'system');
+};
 
 const checkInputLength = (inputText: string): boolean => {
   return inputText.length > 1;
