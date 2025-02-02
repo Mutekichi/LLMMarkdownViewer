@@ -57,7 +57,7 @@ const Main: FC = () => {
           <CustomTextInput
             onChange={(value) => setInputText(value)}
             onButtonClick={(value) => {
-              streamResponse(value, OpenaiModel.o1mini);
+              streamResponse(value, model);
               // streamResponse(value, ClaudeModel.OPUS);
               setInputText('');
             }}
@@ -73,8 +73,11 @@ const Main: FC = () => {
             isOpen={isOpen}
             onOpen={() => setIsOpen(true)}
             onClose={() => setIsOpen(false)}
+            disabled={isLoading}
+            tooltipLabelOnDisabled="You can't change the model while generating."
           />
           <div>{error}</div>
+          {/* <div>{output}</div> */}
         </HStack>
       </VStack>
     </VStack>
@@ -84,7 +87,9 @@ const Main: FC = () => {
 export default Main;
 
 const excludeSystemMessages = (messages: OpenaiMessage[]): OpenaiMessage[] => {
-  return messages.filter((message) => message.role !== 'system');
+  // first message is always system message
+  return messages.slice(1);
+  // return messages.filter((message) => message.role !== 'system');
 };
 
 const checkInputLength = (inputText: string): boolean => {

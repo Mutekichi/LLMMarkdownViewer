@@ -7,6 +7,7 @@ import {
   PopoverContent,
   PopoverTrigger,
 } from '@chakra-ui/popover';
+import { Tooltip } from '@chakra-ui/tooltip';
 import { FC } from 'react';
 
 export type PopoverSelectOption<T> = {
@@ -21,6 +22,8 @@ type PopoverSelectProps<T> = {
   isOpen?: boolean;
   onClose?: () => void;
   onOpen?: () => void;
+  disabled?: boolean;
+  tooltipLabelOnDisabled?: string;
 };
 
 export const PopoverSelect: FC<PopoverSelectProps<any>> = ({
@@ -30,6 +33,8 @@ export const PopoverSelect: FC<PopoverSelectProps<any>> = ({
   isOpen,
   onClose,
   onOpen,
+  disabled,
+  tooltipLabelOnDisabled = '',
 }) => {
   const currentLabel = options.find((opt) => opt.value === value)?.label;
 
@@ -69,10 +74,12 @@ export const PopoverSelect: FC<PopoverSelectProps<any>> = ({
                 w="full"
                 variant="ghost"
                 onClick={() => {
-                  onChange(option.value);
-                  onClose?.();
+                  disabled || onChange(option.value);
+                  disabled || onClose?.();
                 }}
                 isActive={value === option.value}
+                disabled={disabled}
+                tooltipLabelOnDisabled={tooltipLabelOnDisabled}
               >
                 {option.label}
               </PopoverSelectButton>
@@ -84,24 +91,31 @@ export const PopoverSelect: FC<PopoverSelectProps<any>> = ({
   );
 };
 
-const PopoverSelectButton: FC<ButtonProps> = (props) => {
+const PopoverSelectButton: FC<
+  ButtonProps & { isActive: boolean; tooltipLabelOnDisabled: string }
+> = (props) => {
   return (
-    <Button
-      // disable default button styles
-      px={20}
-      py={4}
-      h="60px"
-      border="none"
-      borderRadius="4"
-      bg="#fafafa"
-      _hover={{ bg: '#e8e8e8' }}
-      display="flex"
-      justifyContent="space-between"
-      alignItems="center"
-      cursor="pointer"
-      minW="300px"
-      fontSize="1rem"
-      {...props}
-    />
+    <Tooltip
+      label={props.disabled ? props.tooltipLabelOnDisabled : ''}
+      placement="right"
+    >
+      <Button
+        // disable default button styles
+        px={20}
+        py={4}
+        h="60px"
+        border="none"
+        borderRadius="4"
+        bg="#fafafa"
+        _hover={{ bg: '#e8e8e8' }}
+        display="flex"
+        justifyContent="space-between"
+        alignItems="center"
+        cursor="pointer"
+        minW="300px"
+        fontSize="1rem"
+        {...props}
+      />
+    </Tooltip>
   );
 };

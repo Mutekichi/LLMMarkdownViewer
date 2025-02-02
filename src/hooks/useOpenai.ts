@@ -50,7 +50,7 @@ export const useOpenai = (): UseOpenaiReturn => {
         }
         const prompt = await response.text();
         setSystemPrompt(prompt);
-        setMessages([{ role: 'system', content: prompt }]);
+        setMessages([{ role: 'user', content: prompt }]);
       } catch (err) {
         setError(
           err instanceof Error ? err.message : 'Failed to load system prompt',
@@ -64,7 +64,7 @@ export const useOpenai = (): UseOpenaiReturn => {
   const clearOutput = useCallback(() => {
     setOutput('');
     setError(null);
-    setMessages([{ role: 'system', content: systemPrompt }]);
+    setMessages([{ role: 'user', content: systemPrompt }]);
   }, [systemPrompt]);
 
   const streamResponse = useCallback(
@@ -85,6 +85,9 @@ export const useOpenai = (): UseOpenaiReturn => {
           model: model,
           messages: newMessages,
           stream: true,
+          stream_options: {
+            include_usage: true,
+          },
         };
 
         if (image) {
@@ -105,6 +108,8 @@ export const useOpenai = (): UseOpenaiReturn => {
           const content = chunk.choices[0]?.delta?.content || '';
           fullResponse += content;
           setOutput((prev) => prev + content);
+
+          chunk.usage && console.log(chunk.usage);
         }
 
         if (!stopGeneration) {
