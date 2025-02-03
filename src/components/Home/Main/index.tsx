@@ -1,8 +1,19 @@
 'use client';
 import { Switch } from '@/components/ui/switch';
+import { Tooltip } from '@/components/ui/tooltip';
 import { useOpenai } from '@/hooks/useOpenai';
-import { Box, Center, Flex, HStack, Text, VStack } from '@chakra-ui/react';
+import {
+  Box,
+  Button,
+  Center,
+  Flex,
+  HStack,
+  Icon,
+  Text,
+  VStack,
+} from '@chakra-ui/react';
 import { FC, useState } from 'react';
+import { RxTrash } from 'react-icons/rx';
 import {
   OPENAI_MODEL_DISPLAY_NAMES,
   OpenaiMessage,
@@ -51,6 +62,12 @@ const Main: FC = () => {
 
   const [model, setModel] = useState<OpenaiModelType>(OpenaiModelType.GPT4o);
 
+  const onTemporaryChatButtonClick = () => {
+    if (isChecked) {
+      temporaryClearOutput();
+    }
+    setIsChecked(!isChecked);
+  };
   return (
     <VStack
       w="100%"
@@ -118,7 +135,7 @@ const Main: FC = () => {
             inputDisabled={isLoading}
           />
         </Center>
-        <HStack w="80%" h="100%">
+        <HStack w="80%" h="100%" gap={4}>
           <PopoverSelect
             options={createModelOptions()}
             value={model}
@@ -130,28 +147,68 @@ const Main: FC = () => {
             disabled={isLoading}
             tooltipLabelOnDisabled="You can't change the model while generating."
           />
-          <HStack h="100%" alignItems="flex-end" pb={2} gap={0}>
-            <Box
-              display="flex"
-              alignItems="flex-start"
+          <Tooltip
+            content="Temporary chat"
+            positioning={{ placement: 'right-end' }}
+            openDelay={100}
+            closeDelay={100}
+          >
+            <HStack
               h="100%"
-              opacity={isChecked ? 1 : 0.5}
+              alignItems="flex-end"
+              pb={2}
+              gap={0}
+              onClick={onTemporaryChatButtonClick}
+              cursor="pointer"
+              borderRadius={10}
+              _hover={{ bgColor: 'blackAlpha.50' }}
             >
-              <img src="/icons/vanish.svg" alt="SVG" width={40} height={40} />
-            </Box>
-            <Flex justify="flex-end">
-              <Switch
-                size="lg"
-                checked={isChecked}
-                onChange={() => {
-                  if (isChecked) {
-                    temporaryClearOutput();
-                  }
-                  setIsChecked(!isChecked);
-                }}
-              />
-            </Flex>
-          </HStack>
+              <Box
+                display="flex"
+                alignItems="flex-start"
+                h="100%"
+                opacity={isChecked ? 1 : 0.5}
+              >
+                {/* <img src="/icons/vanish.svg" alt="SVG" width={40} height={40} /> */}
+                <img
+                  src="/icons/temporary_chat.svg"
+                  alt="SVG"
+                  width={40}
+                  height={40}
+                />
+              </Box>
+              <Flex justify="flex-end">
+                <Switch size="lg" checked={isChecked} />
+              </Flex>
+            </HStack>
+          </Tooltip>
+          <Tooltip
+            content="Clear all history"
+            positioning={{ placement: 'right-end' }}
+            openDelay={100}
+            closeDelay={100}
+          >
+            <Button
+              display="flex"
+              h="100%"
+              w="80px"
+              bgColor="transparent"
+              opacity={1}
+              px={2}
+              borderRadius={10}
+              _hover={{ bgColor: 'blackAlpha.50' }}
+              onClick={() => {
+                if (isChecked) {
+                  temporaryClearAllHistory();
+                } else {
+                  clearOutput();
+                }
+              }}
+            >
+              {/* <img src="/icons/vanish.svg" alt="SVG" width={60} height={60} /> */}
+              <Icon as={RxTrash} boxSize={10} color="blackAlpha.800" />
+            </Button>
+          </Tooltip>
         </HStack>
       </VStack>
     </VStack>

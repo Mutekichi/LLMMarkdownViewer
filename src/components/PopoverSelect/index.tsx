@@ -48,7 +48,7 @@ export const PopoverSelect: FC<PopoverSelectProps<any>> = ({
           py={4}
           h="60px"
           border="none"
-          borderRadius={20}
+          borderRadius={10}
           bg="#f5f5f5"
           _hover={{ bg: '#e8e8e8' }}
           onClick={onOpen}
@@ -56,7 +56,7 @@ export const PopoverSelect: FC<PopoverSelectProps<any>> = ({
           justifyContent="space-between"
           alignItems="center"
           cursor="pointer"
-          minW="300px"
+          minW="250px"
           color="black"
         >
           <Text fontSize="1.2rem">{currentLabel}</Text>
