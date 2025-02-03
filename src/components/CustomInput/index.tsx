@@ -1,5 +1,5 @@
-import React, { useState, useRef, useEffect } from 'react';
-import { Textarea, Box } from '@chakra-ui/react';
+import { Box, Button, Textarea } from '@chakra-ui/react';
+import React, { useEffect, useRef, useState } from 'react';
 
 interface CustomTextInputProps {
   placeholder?: string;
@@ -10,9 +10,9 @@ interface CustomTextInputProps {
   error?: boolean;
 }
 
-const C_DEFAULT = '#00FFFF';
-const C_PENDING = '#00FFFF33';
-const C_ERROR = '#FF0000';
+const C_DEFAULT = '#000000';
+const C_PENDING = '#cccccc';
+const C_ERROR = '#ff0000';
 
 const CustomTextInput: React.FC<CustomTextInputProps> = (props) => {
   const {
@@ -28,7 +28,7 @@ const CustomTextInput: React.FC<CustomTextInputProps> = (props) => {
   const [lines, setLines] = useState(1);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
 
-  const LINE_HEIGHT = 32;
+  const LINE_HEIGHT = 28;
   const DEFAULT_HEIGHT = LINE_HEIGHT;
   const BUTTON_WIDTH = 40;
 
@@ -40,20 +40,29 @@ const CustomTextInput: React.FC<CustomTextInputProps> = (props) => {
     }
   };
 
+  const handleButtonClick = () => {
+    if (onButtonClick && !buttonDisabled) {
+      onButtonClick(value);
+      clearInput();
+    }
+  };
+
+  const clearInput = () => {
+    setValue('');
+  };
+
   const handleKeyDown = (event: React.KeyboardEvent<HTMLTextAreaElement>) => {
     if (event.key === 'Enter' && !event.shiftKey) {
       event.preventDefault();
-      if (onButtonClick && !buttonDisabled) {
-        onButtonClick(value);
-      }
+      handleButtonClick();
     }
   };
 
   const adjustTextareaHeight = () => {
     const textarea = textareaRef.current;
     if (textarea) {
-      textarea.style.height = `${DEFAULT_HEIGHT}px`;
-      const newHeight = Math.max(textarea.scrollHeight, DEFAULT_HEIGHT);
+      textarea.style.height = `${LINE_HEIGHT}px`;
+      const newHeight = Math.max(textarea.scrollHeight, LINE_HEIGHT);
       textarea.style.height = `${newHeight}px`;
       const newLines = Math.ceil(newHeight / LINE_HEIGHT);
       setLines(newLines);
@@ -64,10 +73,14 @@ const CustomTextInput: React.FC<CustomTextInputProps> = (props) => {
     adjustTextareaHeight();
   }, [value]);
 
+  useEffect(() => {
+    textareaRef.current?.focus();
+  }, [inputDisabled]);
+
   return (
     <Box
-      width="560px"
-      height={`${Math.max(lines, 3) * LINE_HEIGHT}px`}
+      width="100%"
+      height={`${Math.max(lines, 1) * LINE_HEIGHT}px`}
       borderRadius="50px"
       borderWidth="4px"
       border={
@@ -81,6 +94,8 @@ const CustomTextInput: React.FC<CustomTextInputProps> = (props) => {
     >
       <Textarea
         ref={textareaRef}
+        rows={1}
+        height={`${1.2 * LINE_HEIGHT}px`}
         value={value}
         onChange={handleChange}
         onKeyDown={handleKeyDown}
@@ -91,32 +106,25 @@ const CustomTextInput: React.FC<CustomTextInputProps> = (props) => {
         border="none"
         backgroundColor="transparent"
         color={inputDisabled ? C_PENDING : C_DEFAULT}
-        fontSize="1.5rem"
-        fontFamily="'Roboto Mono', monospace"
+        fontSize="1.2rem"
         resize="none"
+        py={6}
         overflow="hidden"
         _placeholder={{ color: 'gray.500' }}
         _focus={{ outline: 'none' }}
-        sx={{
-          '&::-webkit-scrollbar': {
-            width: '0px',
-          },
-          lineHeight: `${LINE_HEIGHT}px`,
-          letterSpacing: '0.02em',
-        }}
+        lineHeight={`${LINE_HEIGHT}px`}
+        letterSpacing={'0.02em'}
       />
-      <Box
-        as="button"
+      <Button
         aria-label="Send message"
-        onClick={() => onButtonClick && onButtonClick(value)}
-        disabled={buttonDisabled}
+        onClick={handleButtonClick}
+        disabled={buttonDisabled || inputDisabled}
         position="absolute"
         right="20px"
         top="50%"
         transform="translateY(-50%)"
         bg="transparent"
-        border="none"
-        padding="0"
+        p={0}
         cursor="pointer"
         outline="none"
         _hover={{ opacity: 0.8 }}
@@ -125,26 +133,10 @@ const CustomTextInput: React.FC<CustomTextInputProps> = (props) => {
         transition="opacity 0.2s"
         width={`${BUTTON_WIDTH}px`}
         height={`${BUTTON_WIDTH}px`}
-        display="flex"
-        alignItems="center"
-        justifyContent="center"
-      >
-        <svg
-          width={BUTTON_WIDTH}
-          height={BUTTON_WIDTH}
-          viewBox={`0 0 ${BUTTON_WIDTH} ${BUTTON_WIDTH}`}
-          fill="none"
-          xmlns="http://www.w3.org/2000/svg"
-        >
-          <circle
-            cx={BUTTON_WIDTH / 2}
-            cy={BUTTON_WIDTH / 2}
-            r={BUTTON_WIDTH / 2 - 2}
-            stroke={error ? C_ERROR : inputDisabled ? C_PENDING : C_DEFAULT}
-            strokeWidth="2"
-          />
-        </svg>
-      </Box>
+        borderRadius="full"
+        borderWidth="2px"
+        borderColor={error ? C_ERROR : inputDisabled ? C_PENDING : C_DEFAULT}
+      />
     </Box>
   );
 };

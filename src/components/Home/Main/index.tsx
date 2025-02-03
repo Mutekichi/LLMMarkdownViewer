@@ -1,104 +1,239 @@
-import { HStack, Textarea } from '@chakra-ui/react';
+'use client';
+import { Switch } from '@/components/ui/switch';
+import { Tooltip } from '@/components/ui/tooltip';
+import { MessageDetail, useOpenai } from '@/hooks/useOpenai';
+import {
+  Box,
+  Button,
+  Center,
+  Flex,
+  HStack,
+  Icon,
+  Text,
+  VStack,
+} from '@chakra-ui/react';
 import { FC, useState } from 'react';
-import MarkdownViewer from '../../MarkdownViewer';
-import styles from './Main.module.scss';
+import { RxTrash } from 'react-icons/rx';
+import {
+  OPENAI_MODEL_DISPLAY_NAMES,
+  OpenaiModelType,
+} from '../../../config/llm-models';
+import CustomTextInput from '../../CustomInput';
+import { PopoverSelect, PopoverSelectOption } from '../../PopoverSelect';
+import { MessageHistory } from '../MessageHistory';
 
-const complicatedMarkdownText = `
-# Markdown記法サンプル
-
-## テキストスタイル
-**太字テキスト**
-*イタリック*
-~~打ち消し線~~
-\`インラインコード\`
-
-## リンク
-[Google](https://www.google.com)
-
-## リスト
-- 項目1
-  - ネスト項目1-1
-  - ネスト項目1-2
-
-## Math
-$\\frac{1}{2}$ + $\\frac{1}{3}$ = $\\frac{5}{6}$ のように、数式を記述できます。
-
-## コードブロック
-\`\`\`python
-def hello():
-   print("Hello, World!")
-\`\`\`
-
-## テーブル
-| Left | Center | Right |
-|:-----|:------:|------:|
-| 1    | 2      | 3     |
-| 4    | 5      | 6     |
-
-
-`;
+const createModelOptions = (): PopoverSelectOption<OpenaiModelType>[] => {
+  return Object.entries(OPENAI_MODEL_DISPLAY_NAMES).map(([value, label]) => ({
+    value: value as OpenaiModelType,
+    label,
+  }));
+};
 
 const Main: FC = () => {
   const [inputText, setInputText] = useState('');
-  const [errorMessages, setErrorMessages] = useState<string>('');
+  const {
+    output,
+    isLoading,
+    error,
+    streamResponse,
+    clearOutput,
+    stopGeneration,
+    setStopGeneration,
+    chatMessages,
+    messageDetails,
+    clearAllHistory,
+  } = useOpenai();
+  // } = useMockOpenai();
 
+  const {
+    output: temporaryOutput,
+    isLoading: temporaryIsLoading,
+    error: temporaryError,
+    streamResponse: temporaryStreamResponse,
+    clearOutput: temporaryClearOutput,
+    stopGeneration: temporaryStopGeneration,
+    setStopGeneration: temporarySetStopGeneration,
+    chatMessages: temporaryChatMessages,
+    messageDetails: temporaryMessageDetails,
+    clearAllHistory: temporaryClearAllHistory,
+    temporaryStreamResponse: temporaryTemporaryStreamResponse,
+    // } = useMockOpenai();
+  } = useOpenai();
+  const [isOpen, setIsOpen] = useState(false);
+  const [isChecked, setIsChecked] = useState(false);
+
+  const [model, setModel] = useState<OpenaiModelType>(OpenaiModelType.GPT4o);
+
+  const onTemporaryChatButtonClick = () => {
+    if (isChecked) {
+      temporaryClearOutput();
+    }
+    setIsChecked(!isChecked);
+  };
   return (
-    <div className={styles.content}>
-      {/* <div className={styles.model}>
-        <Icosahedron isActivated />
-      </div>
-      <div className={styles.input}>
-        <CustomTextInput
-          placeholder="Your imagination is the limit..."
-          onChange={(value) => setInputText(value)}
-          onButtonClick={(value) => {}}
+    <VStack
+      w="100%"
+      h="100%"
+      maxH="100%"
+      gap={4}
+      justify="space-between"
+      bgColor="#f5f5f5"
+      boxSizing="border-box"
+      pb={2}
+      position="relative"
+    >
+      <Box h="50" />
+      <VStack flex="1" overflowY="auto" w="100%" pb={4} minH="20vh">
+        <MessageHistory
+          messages={excludeSystemMessages(messageDetails)}
+          // chatMessages={chatMessages}
+          streaming={isLoading}
+          streamingMessage={output}
         />
-      </div> */}
-      <HStack>
-        <MarkdownViewer markdown={complicatedMarkdownText} />
-      </HStack>
-    </div>
+        {isChecked && (
+          <VStack
+            w="80%"
+            gap={2}
+            justify="space-between"
+            bgColor="#eeeeee"
+            flex="1"
+            borderTopRadius={20}
+            border="1"
+            justifyContent="start"
+          >
+            <VStack p={2} gap={0}>
+              <Text fontSize="1.5rem" textAlign="center">
+                Temporary Chat
+              </Text>
+              <Text fontSize="1.2rem" textAlign="center">
+                This conversation does not include any previous chat history and
+                will not be saved.
+              </Text>
+            </VStack>
+            <MessageHistory
+              messages={excludeSystemMessages(temporaryMessageDetails)}
+              // chatMessages={temporaryChatMessages}
+              streaming={temporaryIsLoading}
+              streamingMessage={temporaryOutput}
+            />
+          </VStack>
+        )}
+      </VStack>
+      <VStack w="100%" gap={2} justify="space-between" bgColor="#f5f5f5">
+        <Center w="80%">
+          <CustomTextInput
+            onChange={(value) => setInputText(value)}
+            onButtonClick={(value) => {
+              if (isChecked) {
+                temporaryTemporaryStreamResponse(value, model);
+                // temporarySetStopGeneration(false);
+              } else {
+                streamResponse(value, model);
+                setStopGeneration(false);
+              }
+              setInputText('');
+            }}
+            buttonDisabled={!checkInputLength(inputText)}
+            inputDisabled={isLoading}
+          />
+        </Center>
+        <HStack w="80%" h="100%" gap={4}>
+          <PopoverSelect
+            options={createModelOptions()}
+            value={model}
+            onChange={setModel}
+            isOpen={isOpen}
+            setIsOpen={setIsOpen}
+            onOpen={() => setIsOpen(true)}
+            onClose={() => setIsOpen(false)}
+            disabled={isLoading}
+            tooltipLabelOnDisabled="You can't change the model while generating."
+          />
+          <Tooltip
+            content="Temporary chat"
+            positioning={{ placement: 'right-end' }}
+            openDelay={100}
+            closeDelay={100}
+          >
+            <HStack
+              h="100%"
+              alignItems="flex-end"
+              pb={2}
+              gap={0}
+              onClick={onTemporaryChatButtonClick}
+              cursor="pointer"
+              borderRadius={10}
+              _hover={{ bgColor: 'blackAlpha.50' }}
+            >
+              <Box
+                display="flex"
+                alignItems="flex-start"
+                h="100%"
+                opacity={isChecked ? 1 : 0.5}
+              >
+                {/* <img src="/icons/vanish.svg" alt="SVG" width={40} height={40} /> */}
+                <img
+                  src="/icons/temporary_chat.svg"
+                  alt="SVG"
+                  width={40}
+                  height={40}
+                />
+              </Box>
+              <Flex justify="flex-end">
+                <Switch size="lg" checked={isChecked} />
+              </Flex>
+            </HStack>
+          </Tooltip>
+          <Tooltip
+            content="Clear all history"
+            positioning={{ placement: 'right-end' }}
+            openDelay={100}
+            closeDelay={100}
+          >
+            <Button
+              display="flex"
+              h="100%"
+              w="80px"
+              bgColor="transparent"
+              opacity={1}
+              px={2}
+              borderRadius={10}
+              _hover={{ bgColor: 'blackAlpha.50' }}
+              onClick={() => {
+                clearAllHistory();
+                if (isChecked) {
+                  temporaryClearAllHistory();
+                  setIsChecked(false);
+                }
+              }}
+            >
+              {/* <img src="/icons/vanish.svg" alt="SVG" width={60} height={60} /> */}
+              <Icon as={RxTrash} boxSize={10} color="blackAlpha.800" />
+            </Button>
+          </Tooltip>
+        </HStack>
+      </VStack>
+    </VStack>
   );
 };
 
 export default Main;
 
+const excludeSystemMessages = (
+  chatMessages: MessageDetail[],
+): MessageDetail[] => {
+  // first message is always system message
+  return chatMessages.slice(1);
+  // return chatMessages;
+  // return chatMessages.filter((message) => message.role !== 'system');
+};
+
 const checkInputLength = (inputText: string): boolean => {
-  return inputText.length > 2;
+  return inputText.length > 1;
 };
 
 const checkInputIncludesOnlyAvailableCharacters = (
   inputText: string,
 ): boolean => {
   return /^[a-zA-Z0-9!@#$%^&*()_+\-=\[\]{};':"\\|,.<>\/? \n]*$/.test(inputText);
-};
-
-const Message: FC<{ message: string }> = ({ message }) => {
-  return (
-    <Textarea
-      value={message}
-      marginLeft="20px"
-      width="100%"
-      border="none"
-      backgroundColor="transparent"
-      fontSize="1.5rem"
-      fontFamily="'Roboto Mono', monospace"
-      resize="none"
-      overflow="hidden"
-      color="#ff0000"
-      _placeholder={{ color: 'gray.500' }}
-      _focus={{ outline: 'none' }}
-      sx={{
-        '&::-webkit-scrollbar': {
-          width: '0px',
-        },
-        lineHeight: '32px',
-        letterSpacing: '0.02em',
-      }}
-    />
-  );
-};
-
-const ErrorMessages: FC = () => {
-  return <div>Failed to generate model.</div>;
 };
