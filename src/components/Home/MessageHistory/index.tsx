@@ -1,5 +1,5 @@
 import { Box, HStack, VStack } from '@chakra-ui/react';
-import { FC } from 'react';
+import { FC, memo } from 'react';
 import { OpenaiMessage } from '../../../config/llm-models';
 import { Message } from '../Message/index';
 
@@ -20,35 +20,13 @@ const colors = {
   },
 };
 
-export const MessageHistory: FC<MessageHistoryProps> = (props) => {
-  const { messages, streaming, streamingMessage } = props;
-
-  return (
-    <VStack align="stretch" p={4} minH="min-content" w="80%">
-      {messages.map((message, index) => (
-        <Response
-          key={index}
-          isResponseOfUser={message.role === 'user'}
-          response={message.content}
-        />
-      ))}
-      {streaming && (
-        <Response
-          isResponseOfUser={false}
-          response={streamingMessage || 'Generating...'}
-        />
-      )}
-    </VStack>
-  );
-};
-
 interface Response {
   isResponseOfUser: boolean;
   response: string;
   isStreaming?: boolean;
 }
 
-const Response: FC<Response> = (props) => {
+const Response = memo<Response>((props) => {
   const { isResponseOfUser, response } = props;
   return (
     <HStack w="100%" justify={isResponseOfUser ? 'flex-end' : 'flex-start'}>
@@ -70,5 +48,35 @@ const Response: FC<Response> = (props) => {
         />
       </Box>
     </HStack>
+  );
+});
+
+const PastMessages = memo<{ messages: OpenaiMessage[] }>((props) => {
+  const { messages } = props;
+  return (
+    <>
+      {messages.map((message, index) => (
+        <Response
+          key={index}
+          isResponseOfUser={message.role === 'user'}
+          response={message.content}
+        />
+      ))}
+    </>
+  );
+});
+
+export const MessageHistory: FC<MessageHistoryProps> = (props) => {
+  const { messages, streaming, streamingMessage } = props;
+  return (
+    <VStack align="stretch" p={4} minH="min-content" w="80%">
+      <PastMessages messages={messages} />
+      {streaming && (
+        <Response
+          isResponseOfUser={false}
+          response={streamingMessage || 'Generating...'}
+        />
+      )}
+    </VStack>
   );
 };
