@@ -50,6 +50,14 @@ export const useOpenai = (): UseOpenaiReturn => {
         const prompt = await response.text();
         setSystemPrompt(prompt);
         setMessages([{ role: 'user', content: prompt }]);
+        // TODO: Delete
+        setMessages((prev) => [
+          ...prev,
+          {
+            role: 'assistant',
+            content: `# Markdown記法サンプル\n\nめちゃくちゃ長い文章の表示は、どのようになるのでしょうか？確認したいですよね。今、その長い文章がどのように出力されるかのサンプルとして、この文章が生成されています。このままだと、まだ長さが足りないでしょうか。。。？このくらいあれば十分かと思います。\n\n## テキストスタイル\n**太字テキスト**\n*イタリック*\n~~打ち消し線~~\n\`インラインコード\`\n\n## リンク\n[Google](https://www.google.com)\n\n## リスト\n- 項目1\n  - ネスト項目1-1\n  - ネスト項目1-2\n\n## Math\n$\\frac{1}{2}$ + $\\frac{1}{3}$ = $\\frac{5}{6}$ のように、数式を記述できます。\n\n## コードブロック\n\`\`\`python\ndef hello():\n   print("Hello, World!")\n\`\`\`\n`,
+          },
+        ]);
       } catch (err) {
         setError(
           err instanceof Error ? err.message : 'Failed to load system prompt',

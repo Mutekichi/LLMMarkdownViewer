@@ -3,10 +3,10 @@ import { Box, List } from '@chakra-ui/react';
 import 'katex/dist/katex.min.css';
 import { FC } from 'react';
 import ReactMarkdown from 'react-markdown';
-import { Prism as SyntaxHighlighter } from 'react-syntax-highlighter';
 import rehypeKatex from 'rehype-katex';
 import remarkGfm from 'remark-gfm';
 import remarkMath from 'remark-math';
+import { CodeBlock } from './CodeBlock';
 
 interface MarkdownViewerProps {
   markdown: string;
@@ -26,20 +26,7 @@ export const MarkdownViewer: FC<MarkdownViewerProps> = ({ markdown }) => {
         rehypePlugins={[rehypeKatex]}
         children={markdown}
         components={{
-          code(props) {
-            const { children, className, node, ...rest } = props;
-            const match = /language-(\w+)/.exec(className || '');
-            return match ? (
-              <SyntaxHighlighter
-                children={String(children).replace(/\n$/, '')}
-                language={match[1]}
-              />
-            ) : (
-              <code {...rest} className={className}>
-                {children}
-              </code>
-            );
-          },
+          code: (props) => <CodeBlock {...props} />,
           // Markdown の各要素に Chakra UI のコンポーネントを使用
           p: (props) => <Box as="p" marginY={1} {...props} />,
           h1: (props) => <Box as="h1" fontSize="2xl" marginY={4} {...props} />,
