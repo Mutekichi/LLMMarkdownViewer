@@ -41,6 +41,7 @@ const Main: FC = () => {
     stopGeneration,
     setStopGeneration,
     messages,
+    clearAllHistory,
   } = useOpenai();
   // } = useMockOpenai();
 
@@ -198,10 +199,10 @@ const Main: FC = () => {
               borderRadius={10}
               _hover={{ bgColor: 'blackAlpha.50' }}
               onClick={() => {
+                clearAllHistory();
                 if (isChecked) {
                   temporaryClearAllHistory();
-                } else {
-                  clearOutput();
+                  setIsChecked(false);
                 }
               }}
             >
