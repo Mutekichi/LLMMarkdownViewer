@@ -17,7 +17,7 @@ export const Message: FC<MessageProps> = (props) => {
       pb={2}
       bg={bgColor}
       border={borderColor ? `2px solid ${borderColor}` : undefined}
-      borderRadius="20"
+      borderRadius={20}
       overflow="hidden"
     >
       <MarkdownViewer markdown={message} />

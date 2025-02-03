@@ -1,4 +1,6 @@
-import { Box, Center, HStack, Switch, VStack } from '@chakra-ui/react';
+'use client';
+import { Switch } from '@/components/ui/switch';
+import { Box, Center, HStack, VStack } from '@chakra-ui/react';
 import { FC, useState } from 'react';
 import {
   OPENAI_MODEL_DISPLAY_NAMES,
@@ -40,14 +42,14 @@ const Main: FC = () => {
       w="100%"
       h="100%"
       maxH="100%"
-      spacing={4}
+      gap={4}
       justify="space-between"
       bgColor="#f5f5f5"
       boxSizing="border-box"
       pb={2}
     >
       <Box h="50" />
-      <VStack flex="1" overflowY="auto" w="100%" pb="40">
+      <VStack flex="1" overflowY="auto" w="100%" pb={4}>
         <MessageHistory
           messages={excludeSystemMessages(messages)}
           // messages={messages}
@@ -55,7 +57,7 @@ const Main: FC = () => {
           streamingMessage={output}
         />
       </VStack>
-      <VStack w="100%" spacing={2} justify="space-between" bgColor="#f5f5f5">
+      <VStack w="100%" gap={2} justify="space-between" bgColor="#f5f5f5">
         <Center w="80%">
           <CustomTextInput
             onChange={(value) => setInputText(value)}
@@ -74,18 +76,13 @@ const Main: FC = () => {
             value={model}
             onChange={setModel}
             isOpen={isOpen}
+            setIsOpen={setIsOpen}
             onOpen={() => setIsOpen(true)}
             onClose={() => setIsOpen(false)}
             disabled={isLoading}
             tooltipLabelOnDisabled="You can't change the model while generating."
           />
-          <Switch
-            isChecked={isChecked}
-            onChange={() => setIsChecked(!isChecked)}
-            size="lg"
-          >
-            temporary chat
-          </Switch>
+          <Switch size="lg" />
           {/* <div>{error}</div> */}
           {/* <div>{output}</div> */}
         </HStack>

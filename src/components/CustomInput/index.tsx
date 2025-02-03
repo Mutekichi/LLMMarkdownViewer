@@ -1,4 +1,4 @@
-import { Box, Textarea } from '@chakra-ui/react';
+import { Box, Button, Textarea } from '@chakra-ui/react';
 import React, { useEffect, useRef, useState } from 'react';
 
 interface CustomTextInputProps {
@@ -10,7 +10,6 @@ interface CustomTextInputProps {
   error?: boolean;
 }
 
-// const C_DEFAULT = '#00FFFF';
 const C_DEFAULT = '#000000';
 const C_PENDING = '#cccccc';
 const C_ERROR = '#ff0000';
@@ -109,34 +108,23 @@ const CustomTextInput: React.FC<CustomTextInputProps> = (props) => {
         color={inputDisabled ? C_PENDING : C_DEFAULT}
         fontSize="1.2rem"
         resize="none"
-        py={4}
+        py={6}
         overflow="hidden"
         _placeholder={{ color: 'gray.500' }}
         _focus={{ outline: 'none' }}
-        sx={{
-          '&::-webkit-scrollbar': {
-            width: '0px',
-          },
-          '&:focus-visible': {
-            boxShadow: 'none',
-            border: 'none',
-          },
-          lineHeight: `${LINE_HEIGHT}px`,
-          letterSpacing: '0.02em',
-        }}
+        lineHeight={`${LINE_HEIGHT}px`}
+        letterSpacing={'0.02em'}
       />
-      <Box
-        as="button"
+      <Button
         aria-label="Send message"
         onClick={handleButtonClick}
-        disabled={buttonDisabled}
+        disabled={buttonDisabled || inputDisabled}
         position="absolute"
         right="20px"
         top="50%"
         transform="translateY(-50%)"
         bg="transparent"
-        border="none"
-        padding="0"
+        p={0}
         cursor="pointer"
         outline="none"
         _hover={{ opacity: 0.8 }}
@@ -145,26 +133,10 @@ const CustomTextInput: React.FC<CustomTextInputProps> = (props) => {
         transition="opacity 0.2s"
         width={`${BUTTON_WIDTH}px`}
         height={`${BUTTON_WIDTH}px`}
-        display="flex"
-        alignItems="center"
-        justifyContent="center"
-      >
-        <svg
-          width={BUTTON_WIDTH}
-          height={BUTTON_WIDTH}
-          viewBox={`0 0 ${BUTTON_WIDTH} ${BUTTON_WIDTH}`}
-          fill="none"
-          xmlns="http://www.w3.org/2000/svg"
-        >
-          <circle
-            cx={BUTTON_WIDTH / 2}
-            cy={BUTTON_WIDTH / 2}
-            r={BUTTON_WIDTH / 2 - 2}
-            stroke={error ? C_ERROR : inputDisabled ? C_PENDING : C_DEFAULT}
-            strokeWidth="2"
-          />
-        </svg>
-      </Box>
+        borderRadius="full"
+        borderWidth="2px"
+        borderColor={error ? C_ERROR : inputDisabled ? C_PENDING : C_DEFAULT}
+      />
     </Box>
   );
 };

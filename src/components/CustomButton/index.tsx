@@ -1,5 +1,5 @@
 import { Icon, IconProps } from '@chakra-ui/icons';
-import { Box } from '@chakra-ui/react';
+import { Button } from '@chakra-ui/react';
 import React from 'react';
 
 interface CustomButtonProps {
@@ -17,8 +17,7 @@ const CustomButton: React.FC<CustomButtonProps> = (props) => {
   const { icon, color, onClick, disabled } = props;
 
   return (
-    <Box
-      as="button"
+    <Button
       width="100px"
       height="100px"
       onClick={onClick}
@@ -39,7 +38,7 @@ const CustomButton: React.FC<CustomButtonProps> = (props) => {
       justifyContent="center"
     >
       <Icon as={icon} boxSize={40} />
-    </Box>
+    </Button>
   );
 };
 

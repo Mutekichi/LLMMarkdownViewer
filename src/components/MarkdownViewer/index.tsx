@@ -1,4 +1,5 @@
-import { Box } from '@chakra-ui/react';
+'use client';
+import { Box, List } from '@chakra-ui/react';
 import 'katex/dist/katex.min.css';
 import { FC } from 'react';
 import ReactMarkdown from 'react-markdown';
@@ -17,25 +18,9 @@ const PreTag = ({ children, ...props }: any) => (
   </Box>
 );
 
-const mathStyles = {
-  '.math': {
-    fontSize: '1.2em', // Increase size for all math elements
-    lineHeight: '1.5', // Adjust line height for better spacing
-  },
-  '.math.math-inline': {
-    margin: '0 0.15em', // Add small horizontal margins for inline math
-    verticalAlign: 'middle', // Better alignment with surrounding text
-  },
-  '.math.math-display': {
-    margin: '1em 0', // Add vertical margins for display math
-    overflow: 'auto', // Handle long equations
-    maxWidth: '100%', // Prevent overflow
-  },
-};
-
 export const MarkdownViewer: FC<MarkdownViewerProps> = ({ markdown }) => {
   return (
-    <Box sx={mathStyles}>
+    <Box>
       <ReactMarkdown
         remarkPlugins={[remarkGfm, remarkMath]}
         rehypePlugins={[rehypeKatex]}
@@ -60,9 +45,9 @@ export const MarkdownViewer: FC<MarkdownViewerProps> = ({ markdown }) => {
           h1: (props) => <Box as="h1" fontSize="2xl" marginY={4} {...props} />,
           h2: (props) => <Box as="h2" fontSize="xl" marginY={3} {...props} />,
           h3: (props) => <Box as="h3" fontSize="lg" marginY={2} {...props} />,
-          ul: (props) => <Box as="ul" pl={4} marginY={4} {...props} />,
-          ol: (props) => <Box as="ol" pl={4} marginY={4} {...props} />,
-          li: (props) => <Box as="li" marginY={1} {...props} />,
+          ul: (props) => <List.Root pl={4} marginY={4} {...props} />,
+          ol: (props) => <List.Root pl={4} marginY={4} {...props} />,
+          li: (props) => <List.Item marginY={1} {...props} />,
           pre: PreTag,
         }}
       />
