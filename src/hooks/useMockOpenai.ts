@@ -1,46 +1,17 @@
 import { useCallback, useState } from 'react';
-import { OpenaiMessage, OpenaiModelType, UseOpenaiReturn } from './useOpenai';
+import { OpenaiMessage, OpenaiModelType } from '../config/llm-models';
 
-// モック用の定数
+import { UseOpenaiReturn } from './useOpenai';
+
 export const MOCK_RESPONSES = {
   GREETING:
     'こんにちは！私はAIアシスタントです。どのようなお手伝いができますか？',
   ERROR: 'エラーが発生しました。申し訳ありません。',
-  MARKDOWN: `
-# Markdown記法サンプル
-
-めちゃくちゃ長い文章の表示は、どのようになるのでしょうか？確認したいですよね。今、その長い文章がどのように出力されるかのサンプルとして、この文章が生成されています。このままだと、まだ長さが足りないでしょうか。。。？このくらいあれば十分かと思います。
-
-## テキストスタイル
-**太字テキスト**
-*イタリック*
-~~打ち消し線~~
-\`インラインコード\`
-
-## リンク
-[Google](https://www.google.com)
-
-## リスト
-- 項目1
-  - ネスト項目1-1
-  - ネスト項目1-2
-
-## Math
-$\\frac{1}{2}$ + $\\frac{1}{3}$ = $\\frac{5}{6}$ のように、数式を記述できます。
-
-## コードブロック
-\`\`\`python
-def hello():
-   print("Hello, World!")
-\`\`\`
-
-`,
-  // 必要に応じて他の定型文を追加
+  MARKDOWN: `# Markdown記法サンプル\n\nめちゃくちゃ長い文章の表示は、どのようになるのでしょうか？確認したいですよね。今、その長い文章がどのように出力されるかのサンプルとして、この文章が生成されています。このままだと、まだ長さが足りないでしょうか。。。？このくらいあれば十分かと思います。\n\n## テキストスタイル\n**太字テキスト**\n*イタリック*\n~~打ち消し線~~\n\`インラインコード\`\n\n## リンク\n[Google](https://www.google.com)\n\n## リスト\n- 項目1\n  - ネスト項目1-1\n  - ネスト項目1-2\n\n## Math\n$\\frac{1}{2}$ + $\\frac{1}{3}$ = $\\frac{5}{6}$ のように、数式を記述できます。\n\n## コードブロック\n\`\`\`python\ndef hello():\n   print("Hello, World!")\n\`\`\`\n`,
 };
 
-// 遅延時間の設定（ミリ秒）
-const MOCK_STREAM_DELAY = 1; // 文字送り速度
-const MOCK_INITIAL_DELAY = 20; // レスポンス開始までの遅延
+const MOCK_STREAM_DELAY = 0;
+const MOCK_INITIAL_DELAY = 20;
 
 export const useMockOpenai = (): UseOpenaiReturn => {
   const [output, setOutput] = useState<string>('');
@@ -53,6 +24,35 @@ export const useMockOpenai = (): UseOpenaiReturn => {
     setOutput('');
     setError(null);
   }, []);
+
+  const clearAllHistory = useCallback(() => {
+    setOutput('');
+    setError(null);
+    setMessages([]);
+    setIsLoading(false);
+    setStopGeneration(false);
+  }, []);
+
+  const mockStreamProcess = async (
+    response: string,
+    updateMessages: boolean = true,
+  ) => {
+    let fullResponse = '';
+    for (let i = 0; i < response.length; i++) {
+      if (stopGeneration) break;
+      await new Promise((resolve) => setTimeout(resolve, MOCK_STREAM_DELAY));
+      fullResponse += response[i];
+      setOutput(fullResponse);
+    }
+
+    if (!stopGeneration && updateMessages) {
+      setMessages((prev) => [
+        ...prev,
+        { role: 'assistant', content: fullResponse },
+      ]);
+    }
+    return fullResponse;
+  };
 
   const streamResponse = useCallback(
     async (prompt: string, model: OpenaiModelType, image?: File) => {
@@ -68,31 +68,10 @@ export const useMockOpenai = (): UseOpenaiReturn => {
         ];
         setMessages(newMessages);
 
-        // 初期遅延
         await new Promise((resolve) => setTimeout(resolve, MOCK_INITIAL_DELAY));
-
         const mockResponse =
           prompt === 'md' ? MOCK_RESPONSES.MARKDOWN : MOCK_RESPONSES.GREETING;
-        let fullResponse = '';
-
-        // 文字送りのシミュレーション
-        for (let i = 0; i < mockResponse.length; i++) {
-          if (stopGeneration) break;
-
-          await new Promise((resolve) =>
-            setTimeout(resolve, MOCK_STREAM_DELAY),
-          );
-          const char = mockResponse[i];
-          fullResponse += char;
-          setOutput(fullResponse);
-        }
-
-        if (!stopGeneration) {
-          setMessages((prev) => [
-            ...prev,
-            { role: 'assistant', content: fullResponse },
-          ]);
-        }
+        await mockStreamProcess(mockResponse);
       } catch (err) {
         setError(MOCK_RESPONSES.ERROR);
       } finally {
@@ -102,12 +81,44 @@ export const useMockOpenai = (): UseOpenaiReturn => {
     [messages, stopGeneration],
   );
 
+  const temporaryStreamResponse = useCallback(
+    async (prompt: string, model: OpenaiModelType, image?: File) => {
+      try {
+        setIsLoading(true);
+        setError(null);
+        setStopGeneration(false);
+        setOutput('');
+
+        setMessages([{ role: 'user', content: prompt }]);
+        await new Promise((resolve) => setTimeout(resolve, MOCK_INITIAL_DELAY));
+
+        const mockResponse =
+          prompt === 'md' ? MOCK_RESPONSES.MARKDOWN : MOCK_RESPONSES.GREETING;
+        const fullResponse = await mockStreamProcess(mockResponse, false);
+
+        if (!stopGeneration) {
+          setMessages([
+            { role: 'user', content: prompt },
+            { role: 'assistant', content: fullResponse },
+          ]);
+        }
+      } catch (err) {
+        setError(MOCK_RESPONSES.ERROR);
+      } finally {
+        setIsLoading(false);
+      }
+    },
+    [stopGeneration],
+  );
+
   return {
     output,
     isLoading,
     error,
     streamResponse,
+    temporaryStreamResponse,
     clearOutput,
+    clearAllHistory,
     stopGeneration,
     setStopGeneration,
     messages,

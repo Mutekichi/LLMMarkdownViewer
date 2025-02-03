@@ -1,13 +1,13 @@
 'use client';
 import { Switch } from '@/components/ui/switch';
-import { Box, Center, HStack, VStack } from '@chakra-ui/react';
+import { useOpenai } from '@/hooks/useOpenai';
+import { Box, Center, Flex, HStack, Text, VStack } from '@chakra-ui/react';
 import { FC, useState } from 'react';
 import {
   OPENAI_MODEL_DISPLAY_NAMES,
   OpenaiMessage,
   OpenaiModelType,
 } from '../../../config/llm-models';
-import { useMockOpenai } from '../../../hooks/useMockOpenai';
 import CustomTextInput from '../../CustomInput';
 import { PopoverSelect, PopoverSelectOption } from '../../PopoverSelect';
 import { MessageHistory } from '../MessageHistory';
@@ -30,8 +30,22 @@ const Main: FC = () => {
     stopGeneration,
     setStopGeneration,
     messages,
-    // } = useOpenai();
-  } = useMockOpenai();
+  } = useOpenai();
+  // } = useMockOpenai();
+
+  const {
+    output: temporaryOutput,
+    isLoading: temporaryIsLoading,
+    error: temporaryError,
+    streamResponse: temporaryStreamResponse,
+    clearOutput: temporaryClearOutput,
+    stopGeneration: temporaryStopGeneration,
+    setStopGeneration: temporarySetStopGeneration,
+    messages: temporaryMessages,
+    clearAllHistory: temporaryClearAllHistory,
+    temporaryStreamResponse: temporaryTemporaryStreamResponse,
+    // } = useMockOpenai();
+  } = useOpenai();
   const [isOpen, setIsOpen] = useState(false);
   const [isChecked, setIsChecked] = useState(false);
 
@@ -47,6 +61,7 @@ const Main: FC = () => {
       bgColor="#f5f5f5"
       boxSizing="border-box"
       pb={2}
+      position="relative"
     >
       <Box h="50" />
       <VStack flex="1" overflowY="auto" w="100%" pb={4}>
@@ -56,21 +71,54 @@ const Main: FC = () => {
           streaming={isLoading}
           streamingMessage={output}
         />
+        {isChecked && (
+          <VStack
+            w="80%"
+            gap={2}
+            justify="space-between"
+            bgColor="#eeeeee"
+            flex="1"
+            borderTopRadius={20}
+            border="1"
+            justifyContent="start"
+          >
+            <VStack p={2} gap={0}>
+              <Text fontSize="1.5rem" textAlign="center">
+                Temporary Chat
+              </Text>
+              <Text fontSize="1.2rem" textAlign="center">
+                This conversation does not include any previous chat history and
+                will not be saved.
+              </Text>
+            </VStack>
+            <MessageHistory
+              messages={excludeSystemMessages(temporaryMessages)}
+              // messages={temporaryMessages}
+              streaming={temporaryIsLoading}
+              streamingMessage={temporaryOutput}
+            />
+          </VStack>
+        )}
       </VStack>
       <VStack w="100%" gap={2} justify="space-between" bgColor="#f5f5f5">
         <Center w="80%">
           <CustomTextInput
             onChange={(value) => setInputText(value)}
             onButtonClick={(value) => {
-              streamResponse(value, model);
-              // streamResponse(value, ClaudeModel.OPUS);
+              if (isChecked) {
+                temporaryTemporaryStreamResponse(value, model);
+                // temporarySetStopGeneration(false);
+              } else {
+                streamResponse(value, model);
+                setStopGeneration(false);
+              }
               setInputText('');
             }}
             buttonDisabled={!checkInputLength(inputText)}
             inputDisabled={isLoading}
           />
         </Center>
-        <HStack w="80%">
+        <HStack w="80%" h="100%">
           <PopoverSelect
             options={createModelOptions()}
             value={model}
@@ -82,9 +130,28 @@ const Main: FC = () => {
             disabled={isLoading}
             tooltipLabelOnDisabled="You can't change the model while generating."
           />
-          <Switch size="lg" />
-          {/* <div>{error}</div> */}
-          {/* <div>{output}</div> */}
+          <HStack h="100%" alignItems="flex-end" pb={2} gap={0}>
+            <Box
+              display="flex"
+              alignItems="flex-start"
+              h="100%"
+              opacity={isChecked ? 1 : 0.5}
+            >
+              <img src="/icons/vanish.svg" alt="SVG" width={40} height={40} />
+            </Box>
+            <Flex justify="flex-end">
+              <Switch
+                size="lg"
+                checked={isChecked}
+                onChange={() => {
+                  if (isChecked) {
+                    temporaryClearOutput();
+                  }
+                  setIsChecked(!isChecked);
+                }}
+              />
+            </Flex>
+          </HStack>
         </HStack>
       </VStack>
     </VStack>
@@ -96,6 +163,7 @@ export default Main;
 const excludeSystemMessages = (messages: OpenaiMessage[]): OpenaiMessage[] => {
   // first message is always system message
   return messages.slice(1);
+  // return messages;
   // return messages.filter((message) => message.role !== 'system');
 };
 
