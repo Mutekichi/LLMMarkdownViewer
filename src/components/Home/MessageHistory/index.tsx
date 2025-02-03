@@ -1,10 +1,10 @@
+import { MessageDetail } from '@/hooks/useOpenai';
 import { Box, HStack, VStack } from '@chakra-ui/react';
 import { FC, memo } from 'react';
-import { OpenaiMessage } from '../../../config/llm-models';
 import { Message } from '../Message/index';
 
 interface MessageHistoryProps {
-  messages: OpenaiMessage[];
+  messages: MessageDetail[];
   streaming?: boolean;
   streamingMessage?: string;
 }
@@ -18,32 +18,45 @@ const colors = {
     bgColor: undefined,
     borderColor: '#cccccc',
   },
+  error: {
+    bgColor: '#ffcccc',
+    borderColor: '#ff0000',
+  },
 };
-
-interface Response {
-  isResponseOfUser: boolean;
+interface ResponseProps {
+  responseType: 'user' | 'assistant' | 'error';
   response: string;
   isStreaming?: boolean;
 }
 
-const Response = memo<Response>((props) => {
-  const { isResponseOfUser, response } = props;
+const Response = memo<ResponseProps>((props) => {
+  const { responseType, response } = props;
+
   return (
-    <HStack w="100%" justify={isResponseOfUser ? 'flex-end' : 'flex-start'}>
+    <HStack
+      w="100%"
+      justify={responseType === 'user' ? 'flex-end' : 'flex-start'}
+    >
       <Box
-        maxW={isResponseOfUser ? '70%' : '100%'}
-        w={isResponseOfUser ? NaN : '100%'}
+        maxW={responseType === 'user' ? '70%' : '100%'}
+        w={responseType === 'user' ? undefined : '100%'}
         py={2}
       >
         <Message
           message={response}
           bgColor={
-            isResponseOfUser ? colors.user.bgColor : colors.assistant.bgColor
+            responseType === 'user'
+              ? colors.user.bgColor
+              : responseType === 'assistant'
+              ? colors.assistant.bgColor
+              : colors.error.bgColor
           }
           borderColor={
-            isResponseOfUser
+            responseType === 'user'
               ? colors.user.borderColor
-              : colors.assistant.borderColor
+              : responseType === 'assistant'
+              ? colors.assistant.borderColor
+              : colors.error.borderColor
           }
         />
       </Box>
@@ -51,14 +64,14 @@ const Response = memo<Response>((props) => {
   );
 });
 
-const PastMessages = memo<{ messages: OpenaiMessage[] }>((props) => {
+const PastMessages = memo<{ messages: MessageDetail[] }>((props) => {
   const { messages } = props;
   return (
     <>
       {messages.map((message, index) => (
         <Response
           key={index}
-          isResponseOfUser={message.role === 'user'}
+          responseType={message.role}
           response={message.content}
         />
       ))}
@@ -73,7 +86,7 @@ export const MessageHistory: FC<MessageHistoryProps> = (props) => {
       <PastMessages messages={messages} />
       {streaming && (
         <Response
-          isResponseOfUser={false}
+          responseType="assistant"
           response={streamingMessage || 'Generating...'}
         />
       )}

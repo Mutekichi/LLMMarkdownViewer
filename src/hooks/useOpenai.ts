@@ -1,10 +1,18 @@
 import OpenAI from 'openai';
 import { useCallback, useEffect, useState } from 'react';
-import {
-  OPENAI_MODEL_API_NAMES,
-  OpenaiMessage,
-  OpenaiModelType,
-} from '../config/llm-models';
+import { OPENAI_MODEL_API_NAMES, OpenaiModelType } from '../config/llm-models';
+
+export interface ChatMessage {
+  role: 'user' | 'assistant';
+  content: string;
+}
+
+export interface MessageDetail {
+  role: 'user' | 'assistant' | 'error';
+  content: string;
+  model?: OpenaiModelType;
+  timestamp: Date;
+}
 
 const openai = new OpenAI({
   apiKey: process.env.NEXT_PUBLIC_OPENAI_API_KEY,
@@ -23,7 +31,8 @@ export interface UseOpenaiReturn {
   clearOutput: () => void;
   stopGeneration: boolean;
   setStopGeneration: (stop: boolean) => void;
-  messages: OpenaiMessage[];
+  chatMessages: ChatMessage[];
+  messageDetails: MessageDetail[];
   clearAllHistory: () => void;
   temporaryStreamResponse: (
     prompt: string,
@@ -37,7 +46,10 @@ export const useOpenai = (): UseOpenaiReturn => {
   const [isLoading, setIsLoading] = useState<boolean>(false);
   const [error, setError] = useState<string | null>(null);
   const [stopGeneration, setStopGeneration] = useState<boolean>(false);
-  const [messages, setMessages] = useState<OpenaiMessage[]>([]);
+
+  const [chatMessages, setChatMessages] = useState<ChatMessage[]>([]);
+  const [messageDetails, setMessageDetails] = useState<MessageDetail[]>([]);
+
   const [systemPrompt, setSystemPrompt] = useState<string>('');
 
   useEffect(() => {
@@ -49,19 +61,62 @@ export const useOpenai = (): UseOpenaiReturn => {
         }
         const prompt = await response.text();
         setSystemPrompt(prompt);
-        setMessages([{ role: 'user', content: prompt }]);
-        // TODO: Delete
-        setMessages((prev) => [
+        // set system prompt as the initial message
+        // NOTE: this should not be seen on the UI
+        // role: 'system' cannot be applied to some models, so it is not used
+        setChatMessages([{ role: 'user', content: prompt }]);
+        setMessageDetails([
+          { role: 'user', content: prompt, timestamp: new Date() },
+        ]);
+
+        // TODO: remove this sample content
+        const sampleContent = `# Markdown記法サンプル
+
+めちゃくちゃ長い文章の表示は、どのようになるのでしょうか？確認したいですよね。今、その長い文章がどのように出力されるかのサンプルとして、この文章が生成されています。
+
+## テキストスタイル
+**太字テキスト**
+*イタリック*
+~~打ち消し線~~
+\`インラインコード\`
+
+## リンク
+[Google](https://www.google.com)
+
+## リスト
+- 項目1
+  - ネスト項目1-1
+  - ネスト項目1-2
+
+## Math
+$\\frac{1}{2}$ + $\\frac{1}{3}$ = $\\frac{5}{6}$ のように、数式を記述できます。
+
+## コードブロック
+\`\`\`python
+def hello():
+    print("Hello, World!")
+\`\`\``;
+
+        setChatMessages((prev) => [
+          ...prev,
+          { role: 'assistant', content: sampleContent },
+        ]);
+        setMessageDetails((prev) => [
           ...prev,
           {
             role: 'assistant',
-            content: `# Markdown記法サンプル\n\nめちゃくちゃ長い文章の表示は、どのようになるのでしょうか？確認したいですよね。今、その長い文章がどのように出力されるかのサンプルとして、この文章が生成されています。このままだと、まだ長さが足りないでしょうか。。。？このくらいあれば十分かと思います。\n\n## テキストスタイル\n**太字テキスト**\n*イタリック*\n~~打ち消し線~~\n\`インラインコード\`\n\n## リンク\n[Google](https://www.google.com)\n\n## リスト\n- 項目1\n  - ネスト項目1-1\n  - ネスト項目1-2\n\n## Math\n$\\frac{1}{2}$ + $\\frac{1}{3}$ = $\\frac{5}{6}$ のように、数式を記述できます。\n\n## コードブロック\n\`\`\`python\ndef hello():\n   print("Hello, World!")\n\`\`\`\n`,
+            content: sampleContent,
+            timestamp: new Date(),
           },
         ]);
       } catch (err) {
-        setError(
-          err instanceof Error ? err.message : 'Failed to load system prompt',
-        );
+        const errorMsg =
+          err instanceof Error ? err.message : 'Failed to load system prompt';
+        setError(errorMsg);
+        setMessageDetails((prev) => [
+          ...prev,
+          { role: 'error', content: errorMsg, timestamp: new Date() },
+        ]);
       }
     };
 
@@ -71,7 +126,10 @@ export const useOpenai = (): UseOpenaiReturn => {
   const clearOutput = useCallback(() => {
     setOutput('');
     setError(null);
-    setMessages([{ role: 'user', content: systemPrompt }]);
+    setChatMessages([{ role: 'user', content: systemPrompt }]);
+    setMessageDetails([
+      { role: 'user', content: systemPrompt, timestamp: new Date() },
+    ]);
   }, [systemPrompt]);
 
   const streamResponse = useCallback(
@@ -82,15 +140,15 @@ export const useOpenai = (): UseOpenaiReturn => {
         setStopGeneration(false);
         setOutput('');
 
-        const newMessages: OpenaiMessage[] = [
-          ...messages,
-          { role: 'user', content: prompt },
-        ];
-        setMessages(newMessages);
+        setChatMessages((prev) => [...prev, { role: 'user', content: prompt }]);
+        setMessageDetails((prev) => [
+          ...prev,
+          { role: 'user', content: prompt, model, timestamp: new Date() },
+        ]);
 
         let payload: any = {
           model: OPENAI_MODEL_API_NAMES[model],
-          messages: newMessages,
+          messages: [...chatMessages, { role: 'user', content: prompt }],
           stream: true,
           stream_options: {
             include_usage: true,
@@ -108,38 +166,52 @@ export const useOpenai = (): UseOpenaiReturn => {
         const stream = await openai.chat.completions.create(payload);
 
         let fullResponse = '';
-
         for await (const chunk of stream as any) {
           if (stopGeneration) break;
-
           const content = chunk.choices[0]?.delta?.content || '';
           fullResponse += content;
           setOutput((prev) => prev + content);
-
-          chunk.usage && console.log(chunk.usage);
+          if (chunk.usage) {
+          }
         }
 
         if (!stopGeneration) {
-          setMessages((prev) => [
+          setChatMessages((prev) => [
             ...prev,
             { role: 'assistant', content: fullResponse },
           ]);
+          setMessageDetails((prev) => [
+            ...prev,
+            {
+              role: 'assistant',
+              content: fullResponse,
+              model,
+              timestamp: new Date(),
+            },
+          ]);
         }
       } catch (err) {
-        setError(
-          err instanceof Error ? err.message : '予期せぬエラーが発生しました',
-        );
+        const errorMsg =
+          err instanceof Error ? err.message : '予期せぬエラーが発生しました';
+        setError(errorMsg);
+        setMessageDetails((prev) => [
+          ...prev,
+          { role: 'error', content: errorMsg, timestamp: new Date() },
+        ]);
       } finally {
         setIsLoading(false);
       }
     },
-    [messages, stopGeneration],
+    [chatMessages, stopGeneration],
   );
 
   const clearAllHistory = useCallback(() => {
     setOutput('');
     setError(null);
-    setMessages([{ role: 'user', content: systemPrompt }]);
+    setChatMessages([{ role: 'user', content: systemPrompt }]);
+    setMessageDetails([
+      { role: 'user', content: systemPrompt, timestamp: new Date() },
+    ]);
     setIsLoading(false);
     setStopGeneration(false);
   }, [systemPrompt]);
@@ -152,12 +224,16 @@ export const useOpenai = (): UseOpenaiReturn => {
         setStopGeneration(false);
         setOutput('');
 
-        const temporaryMessages: OpenaiMessage[] = [
+        const temporaryMessages: ChatMessage[] = [
           { role: 'user', content: systemPrompt },
           { role: 'user', content: prompt },
         ];
 
-        setMessages((prev) => [...prev, { role: 'user', content: prompt }]);
+        setChatMessages((prev) => [...prev, { role: 'user', content: prompt }]);
+        setMessageDetails((prev) => [
+          ...prev,
+          { role: 'user', content: prompt, model, timestamp: new Date() },
+        ]);
 
         let payload: any = {
           model: OPENAI_MODEL_API_NAMES[model],
@@ -177,27 +253,38 @@ export const useOpenai = (): UseOpenaiReturn => {
         }
 
         const stream = await openai.chat.completions.create(payload);
-
         let fullResponse = '';
 
         for await (const chunk of stream as any) {
           if (stopGeneration) break;
-
           const content = chunk.choices[0]?.delta?.content || '';
           fullResponse += content;
           setOutput((prev) => prev + content);
         }
 
         if (!stopGeneration && fullResponse) {
-          setMessages((prev) => [
+          setChatMessages((prev) => [
             ...prev,
             { role: 'assistant', content: fullResponse },
           ]);
+          setMessageDetails((prev) => [
+            ...prev,
+            {
+              role: 'assistant',
+              content: fullResponse,
+              model,
+              timestamp: new Date(),
+            },
+          ]);
         }
       } catch (err) {
-        setError(
-          err instanceof Error ? err.message : '予期せぬエラーが発生しました',
-        );
+        const errorMsg =
+          err instanceof Error ? err.message : '予期せぬエラーが発生しました';
+        setError(errorMsg);
+        setMessageDetails((prev) => [
+          ...prev,
+          { role: 'error', content: errorMsg, timestamp: new Date() },
+        ]);
       } finally {
         setIsLoading(false);
       }
@@ -225,7 +312,8 @@ export const useOpenai = (): UseOpenaiReturn => {
     clearOutput,
     stopGeneration,
     setStopGeneration,
-    messages,
+    chatMessages,
+    messageDetails,
     clearAllHistory,
     temporaryStreamResponse,
   };

@@ -1,7 +1,7 @@
 'use client';
 import { Switch } from '@/components/ui/switch';
 import { Tooltip } from '@/components/ui/tooltip';
-import { useOpenai } from '@/hooks/useOpenai';
+import { MessageDetail, useOpenai } from '@/hooks/useOpenai';
 import {
   Box,
   Button,
@@ -16,7 +16,6 @@ import { FC, useState } from 'react';
 import { RxTrash } from 'react-icons/rx';
 import {
   OPENAI_MODEL_DISPLAY_NAMES,
-  OpenaiMessage,
   OpenaiModelType,
 } from '../../../config/llm-models';
 import CustomTextInput from '../../CustomInput';
@@ -40,7 +39,8 @@ const Main: FC = () => {
     clearOutput,
     stopGeneration,
     setStopGeneration,
-    messages,
+    chatMessages,
+    messageDetails,
     clearAllHistory,
   } = useOpenai();
   // } = useMockOpenai();
@@ -53,7 +53,8 @@ const Main: FC = () => {
     clearOutput: temporaryClearOutput,
     stopGeneration: temporaryStopGeneration,
     setStopGeneration: temporarySetStopGeneration,
-    messages: temporaryMessages,
+    chatMessages: temporaryChatMessages,
+    messageDetails: temporaryMessageDetails,
     clearAllHistory: temporaryClearAllHistory,
     temporaryStreamResponse: temporaryTemporaryStreamResponse,
     // } = useMockOpenai();
@@ -82,10 +83,10 @@ const Main: FC = () => {
       position="relative"
     >
       <Box h="50" />
-      <VStack flex="1" overflowY="auto" w="100%" pb={4}>
+      <VStack flex="1" overflowY="auto" w="100%" pb={4} minH="20vh">
         <MessageHistory
-          messages={excludeSystemMessages(messages)}
-          // messages={messages}
+          messages={excludeSystemMessages(messageDetails)}
+          // chatMessages={chatMessages}
           streaming={isLoading}
           streamingMessage={output}
         />
@@ -110,8 +111,8 @@ const Main: FC = () => {
               </Text>
             </VStack>
             <MessageHistory
-              messages={excludeSystemMessages(temporaryMessages)}
-              // messages={temporaryMessages}
+              messages={excludeSystemMessages(temporaryMessageDetails)}
+              // chatMessages={temporaryChatMessages}
               streaming={temporaryIsLoading}
               streamingMessage={temporaryOutput}
             />
@@ -218,11 +219,13 @@ const Main: FC = () => {
 
 export default Main;
 
-const excludeSystemMessages = (messages: OpenaiMessage[]): OpenaiMessage[] => {
+const excludeSystemMessages = (
+  chatMessages: MessageDetail[],
+): MessageDetail[] => {
   // first message is always system message
-  return messages.slice(1);
-  // return messages;
-  // return messages.filter((message) => message.role !== 'system');
+  return chatMessages.slice(1);
+  // return chatMessages;
+  // return chatMessages.filter((message) => message.role !== 'system');
 };
 
 const checkInputLength = (inputText: string): boolean => {
