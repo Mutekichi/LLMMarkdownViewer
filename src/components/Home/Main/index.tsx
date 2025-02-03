@@ -1,11 +1,11 @@
-import { Box, Center, HStack, VStack } from '@chakra-ui/react';
+import { Box, Center, HStack, Switch, VStack } from '@chakra-ui/react';
 import { FC, useState } from 'react';
 import {
   OPENAI_MODEL_DISPLAY_NAMES,
   OpenaiMessage,
   OpenaiModelType,
 } from '../../../config/llm-models';
-import { useOpenai } from '../../../hooks/useOpenai';
+import { useMockOpenai } from '../../../hooks/useMockOpenai';
 import CustomTextInput from '../../CustomInput';
 import { PopoverSelect, PopoverSelectOption } from '../../PopoverSelect';
 import { MessageHistory } from '../MessageHistory';
@@ -28,11 +28,10 @@ const Main: FC = () => {
     stopGeneration,
     setStopGeneration,
     messages,
-  } = useOpenai();
-  // } = useMockOpenai();
-  // } = useClaude();
-
+    // } = useOpenai();
+  } = useMockOpenai();
   const [isOpen, setIsOpen] = useState(false);
+  const [isChecked, setIsChecked] = useState(false);
 
   const [model, setModel] = useState<OpenaiModelType>(OpenaiModelType.GPT4o);
 
@@ -41,11 +40,11 @@ const Main: FC = () => {
       w="100%"
       h="100%"
       maxH="100%"
-      spacing={8}
+      spacing={4}
       justify="space-between"
       bgColor="#f5f5f5"
       boxSizing="border-box"
-      py={8}
+      pb={2}
     >
       <Box h="50" />
       <VStack flex="1" overflowY="auto" w="100%" pb="40">
@@ -56,7 +55,7 @@ const Main: FC = () => {
           streamingMessage={output}
         />
       </VStack>
-      <VStack w="100%" spacing={8} justify="space-between" bgColor="#f5f5f5">
+      <VStack w="100%" spacing={2} justify="space-between" bgColor="#f5f5f5">
         <Center w="80%">
           <CustomTextInput
             onChange={(value) => setInputText(value)}
@@ -80,7 +79,14 @@ const Main: FC = () => {
             disabled={isLoading}
             tooltipLabelOnDisabled="You can't change the model while generating."
           />
-          <div>{error}</div>
+          <Switch
+            isChecked={isChecked}
+            onChange={() => setIsChecked(!isChecked)}
+            size="lg"
+          >
+            temporary chat
+          </Switch>
+          {/* <div>{error}</div> */}
           {/* <div>{output}</div> */}
         </HStack>
       </VStack>

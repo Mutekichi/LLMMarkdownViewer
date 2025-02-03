@@ -208,10 +208,10 @@
     "@chakra-ui/visually-hidden" "2.2.0"
     "@zag-js/focus-visible" "0.16.0"
 
-"@chakra-ui/cli@^3.5.1":
-  version "3.5.1"
-  resolved "https://registry.yarnpkg.com/@chakra-ui/cli/-/cli-3.5.1.tgz#5680bcc9eb303c40ef60328b026776de1fd9eb0e"
-  integrity sha512-yvx8U+ndyE8WZuqkCvoVjEYWzF8XucTfM5VHGkk+iRLlFbQPZRdpn4nfhp8YC0WkfLHSL/woA0eQbIGK+4CqUQ==
+"@chakra-ui/cli@^3.6.0":
+  version "3.6.0"
+  resolved "https://registry.yarnpkg.com/@chakra-ui/cli/-/cli-3.6.0.tgz#5d51e717929f9b40d9ffabcb71936e3a08661dd5"
+  integrity sha512-HFwU8BxRD6YP9q5PsGNakS+LCl+TAAv/Ty1lYthtA0s0PZoenTbDi7ZQUb5D7XiY8US+pw1WoaYb+3ZFstqOlw==
   dependencies:
     "@clack/prompts" "0.7.0"
     "@pandacss/is-valid-prop" "0.41.0"

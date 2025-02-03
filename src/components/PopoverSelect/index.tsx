@@ -42,8 +42,7 @@ export const PopoverSelect: FC<PopoverSelectProps<any>> = ({
     <Popover isOpen={isOpen} onClose={onClose}>
       <PopoverTrigger>
         <Button
-          pr={20}
-          pl={30}
+          px={8}
           py={4}
           h="60px"
           border="none"
@@ -57,17 +56,17 @@ export const PopoverSelect: FC<PopoverSelectProps<any>> = ({
           cursor="pointer"
           minW="300px"
         >
-          <Text fontSize="1rem">{currentLabel}</Text>
+          <Text fontSize="1.2rem">{currentLabel}</Text>
           {isOpen ? (
-            <ChevronDownIcon boxSize={20} />
+            <ChevronDownIcon boxSize={5} />
           ) : (
-            <ChevronUpIcon boxSize={20} />
+            <ChevronUpIcon boxSize={5} />
           )}
         </Button>
       </PopoverTrigger>
-      <PopoverContent>
+      <PopoverContent sx={{ all: 'unset' }}>
         <PopoverBody>
-          <VStack spacing={0}>
+          <VStack spacing={0} p={0} sx={{ all: 'unset' }}>
             {options.map((option) => (
               <PopoverSelectButton
                 key={option.value}
@@ -97,23 +96,23 @@ const PopoverSelectButton: FC<
   return (
     <Tooltip
       label={props.disabled ? props.tooltipLabelOnDisabled : ''}
-      placement="right"
+      placement="bottom-start"
     >
       <Button
         // disable default button styles
-        px={20}
         py={4}
         h="60px"
         border="none"
         borderRadius="4"
         bg="#fafafa"
-        _hover={{ bg: '#e8e8e8' }}
+        _hover={{ bg: '#f3f3f3' }}
         display="flex"
         justifyContent="space-between"
         alignItems="center"
         cursor="pointer"
         minW="300px"
         fontSize="1rem"
+        _active={{ bg: '#e8e8e8' }}
         {...props}
       />
     </Tooltip>

@@ -6,7 +6,7 @@
   "license": "MIT",
   "dependencies": {
     "@anthropic-ai/sdk": "^0.36.3",
-    "@chakra-ui/cli": "^3.5.1",
+    "@chakra-ui/cli": "^3.6.0",
     "@chakra-ui/icons": "^2.1.1",
     "@chakra-ui/react": "^2.8.2",
     "@emotion/react": "^11.11.4",

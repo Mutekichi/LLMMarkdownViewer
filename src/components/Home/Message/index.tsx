@@ -1,7 +1,6 @@
 import { Box } from '@chakra-ui/react';
 import { FC } from 'react';
-import MarkdownViewer from '../../MarkdownViewer';
-
+import { MarkdownViewer } from '../../MarkdownViewer';
 interface MessageProps {
   message: string;
   bgColor?: string;
@@ -13,13 +12,15 @@ export const Message: FC<MessageProps> = (props) => {
 
   return (
     <Box
-      px={12}
+      px={8}
+      pt={2}
+      pb={2}
       bg={bgColor}
       border={borderColor ? `2px solid ${borderColor}` : undefined}
       borderRadius="20"
       overflow="hidden"
     >
-      {MarkdownViewer({ markdown: message })}
+      <MarkdownViewer markdown={message} />
     </Box>
   );
 };

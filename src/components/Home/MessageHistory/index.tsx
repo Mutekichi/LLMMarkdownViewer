@@ -24,14 +24,7 @@ export const MessageHistory: FC<MessageHistoryProps> = (props) => {
   const { messages, streaming, streamingMessage } = props;
 
   return (
-    <VStack
-      align="stretch"
-      spacing={20}
-      p={4}
-      bg="blue.50"
-      minH="min-content"
-      w="80%"
-    >
+    <VStack align="stretch" p={4} minH="min-content" w="80%">
       {messages.map((message, index) => (
         <Response
           key={index}
