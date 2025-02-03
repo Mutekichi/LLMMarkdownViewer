@@ -93,6 +93,11 @@ export const useOpenai = (): UseOpenaiReturn => {
 ## Math
 $\\frac{1}{2}$ + $\\frac{1}{3}$ = $\\frac{5}{6}$ のように、数式を記述できます。
 
+改行するとこのようになります。
+
+$$ E = mc^2 $$
+
+
 ## コードブロック
 \`\`\`python
 def hello():

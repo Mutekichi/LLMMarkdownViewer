@@ -1,5 +1,6 @@
 'use client';
 import { Box, List } from '@chakra-ui/react';
+import { Global } from '@emotion/react';
 import 'katex/dist/katex.min.css';
 import { FC } from 'react';
 import ReactMarkdown from 'react-markdown';
@@ -21,6 +22,15 @@ const PreTag = ({ children, ...props }: any) => (
 export const MarkdownViewer: FC<MarkdownViewerProps> = ({ markdown }) => {
   return (
     <Box>
+      <Global
+        styles={`
+      .katex,
+      .katex-display {
+        font-size: 1.5em;
+        padding: 0.1em 0.1em;
+      }
+    `}
+      />
       <ReactMarkdown
         remarkPlugins={[remarkGfm, remarkMath]}
         rehypePlugins={[rehypeKatex]}
@@ -28,7 +38,7 @@ export const MarkdownViewer: FC<MarkdownViewerProps> = ({ markdown }) => {
         components={{
           code: (props) => <CodeBlock {...props} />,
           // Markdown の各要素に Chakra UI のコンポーネントを使用
-          p: (props) => <Box as="p" marginY={1} {...props} />,
+          p: (props) => <Box as="p" marginY={2} {...props} />,
           h1: (props) => <Box as="h1" fontSize="2xl" marginY={4} {...props} />,
           h2: (props) => <Box as="h2" fontSize="xl" marginY={3} {...props} />,
           h3: (props) => <Box as="h3" fontSize="lg" marginY={2} {...props} />,

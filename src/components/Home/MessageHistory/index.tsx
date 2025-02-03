@@ -61,7 +61,7 @@ const Response = memo<ResponseProps>((props) => {
               : colors.error.borderColor
           }
         />
-        {cost}
+        {cost && Number((cost / 1000000).toFixed(6)).toString()}
       </Box>
     </HStack>
   );
