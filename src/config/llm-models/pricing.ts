@@ -31,3 +31,15 @@ export const OPENAI_MODEL_PRICING: Record<OpenaiModelType, OpenaiModelPricing> =
       perOutputToken: 4.4,
     },
   };
+
+/**
+ * NOTE: Note: The return value of this function is multiplied by 1,000,000 because the fee is calculated in "dollars per 1M tokens".
+ */
+export const calculateCost = (
+  model: OpenaiModelType,
+  inputTokens: number,
+  outputTokens: number,
+): number => {
+  const { perInputToken, perOutputToken } = OPENAI_MODEL_PRICING[model];
+  return perInputToken * inputTokens + perOutputToken * outputTokens;
+};

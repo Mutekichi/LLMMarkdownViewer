@@ -12,6 +12,8 @@ export interface MessageDetail {
   content: string;
   model?: OpenaiModelType;
   timestamp: Date;
+  inputTokens?: number;
+  outputTokens?: number;
 }
 
 const openai = new OpenAI({
@@ -166,12 +168,14 @@ def hello():
         const stream = await openai.chat.completions.create(payload);
 
         let fullResponse = '';
+        let usageDetail: any = null;
         for await (const chunk of stream as any) {
           if (stopGeneration) break;
           const content = chunk.choices[0]?.delta?.content || '';
           fullResponse += content;
           setOutput((prev) => prev + content);
           if (chunk.usage) {
+            usageDetail = chunk.usage;
           }
         }
 
@@ -187,6 +191,8 @@ def hello():
               content: fullResponse,
               model,
               timestamp: new Date(),
+              inputTokens: usageDetail.prompt_tokens,
+              outputTokens: usageDetail.completion_tokens,
             },
           ]);
         }
@@ -254,12 +260,16 @@ def hello():
 
         const stream = await openai.chat.completions.create(payload);
         let fullResponse = '';
+        let usageDetail: any = null;
 
         for await (const chunk of stream as any) {
           if (stopGeneration) break;
           const content = chunk.choices[0]?.delta?.content || '';
           fullResponse += content;
           setOutput((prev) => prev + content);
+          if (chunk.usage) {
+            usageDetail = chunk.usage;
+          }
         }
 
         if (!stopGeneration && fullResponse) {
@@ -274,6 +284,8 @@ def hello():
               content: fullResponse,
               model,
               timestamp: new Date(),
+              inputTokens: usageDetail.prompt_tokens,
+              outputTokens: usageDetail.completion_tokens,
             },
           ]);
         }

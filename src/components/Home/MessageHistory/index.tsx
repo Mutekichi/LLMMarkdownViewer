@@ -1,3 +1,4 @@
+import { calculateCost } from '@/config/llm-models';
 import { MessageDetail } from '@/hooks/useOpenai';
 import { Box, HStack, VStack } from '@chakra-ui/react';
 import { FC, memo } from 'react';
@@ -26,11 +27,12 @@ const colors = {
 interface ResponseProps {
   responseType: 'user' | 'assistant' | 'error';
   response: string;
+  cost?: number;
   isStreaming?: boolean;
 }
 
 const Response = memo<ResponseProps>((props) => {
-  const { responseType, response } = props;
+  const { responseType, response, cost } = props;
 
   return (
     <HStack
@@ -59,6 +61,7 @@ const Response = memo<ResponseProps>((props) => {
               : colors.error.borderColor
           }
         />
+        {cost}
       </Box>
     </HStack>
   );
@@ -73,6 +76,16 @@ const PastMessages = memo<{ messages: MessageDetail[] }>((props) => {
           key={index}
           responseType={message.role}
           response={message.content}
+          cost={
+            message.inputTokens &&
+            message.outputTokens &&
+            message.model &&
+            calculateCost(
+              message.model,
+              message.inputTokens,
+              message.outputTokens,
+            )
+          }
         />
       ))}
     </>
