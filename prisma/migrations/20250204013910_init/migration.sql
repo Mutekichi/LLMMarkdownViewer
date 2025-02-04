@@ -1,0 +1,9 @@
+-- CreateTable
+CREATE TABLE "UsageLog" (
+    "id" INTEGER NOT NULL PRIMARY KEY AUTOINCREMENT,
+    "promptTokens" INTEGER NOT NULL,
+    "completionTokens" INTEGER NOT NULL,
+    "model" TEXT NOT NULL,
+    "cost" DECIMAL NOT NULL DEFAULT 0.0,
+    "timestamp" DATETIME NOT NULL DEFAULT CURRENT_TIMESTAMP
+);

@@ -1,6 +1,10 @@
 import OpenAI from 'openai';
 import { useCallback, useEffect, useState } from 'react';
-import { OPENAI_MODEL_API_NAMES, OpenaiModelType } from '../config/llm-models';
+import {
+  calculateCost,
+  OPENAI_MODEL_API_NAMES,
+  OpenaiModelType,
+} from '../config/llm-models';
 
 export interface ChatMessage {
   role: 'user' | 'assistant';
@@ -200,6 +204,27 @@ def hello():
               outputTokens: usageDetail.completion_tokens,
             },
           ]);
+          if (usageDetail) {
+            const promptTokens = usageDetail.prompt_tokens;
+            const completionTokens = usageDetail.completion_tokens;
+            const cost = calculateCost(model, promptTokens, completionTokens);
+            try {
+              await fetch('/api/usage-logs', {
+                method: 'POST',
+                headers: {
+                  'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({
+                  promptTokens,
+                  completionTokens,
+                  model,
+                  cost,
+                }),
+              });
+            } catch (error) {
+              console.error('Failed to log usage', error);
+            }
+          }
         }
       } catch (err) {
         const errorMsg =
@@ -293,6 +318,27 @@ def hello():
               outputTokens: usageDetail.completion_tokens,
             },
           ]);
+          if (usageDetail) {
+            const promptTokens = usageDetail.prompt_tokens;
+            const completionTokens = usageDetail.completion_tokens;
+            const cost = calculateCost(model, promptTokens, completionTokens);
+            try {
+              await fetch('/api/usage-logs', {
+                method: 'POST',
+                headers: {
+                  'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({
+                  promptTokens,
+                  completionTokens,
+                  model,
+                  cost,
+                }),
+              });
+            } catch (error) {
+              console.error('Failed to log usage', error);
+            }
+          }
         }
       } catch (err) {
         const errorMsg =

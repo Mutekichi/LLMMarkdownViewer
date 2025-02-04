@@ -1,46 +1,23 @@
-datasource db {
-  provider = "sqlite"
-  url      = env("DATABASE_URL")
-}
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+// Looking for ways to speed up your queries, or scale easily with your serverless or edge functions?
+// Try Prisma Accelerate: https://pris.ly/cli/accelerate-init
 
 generator client {
   provider = "prisma-client-js"
 }
 
-model LoginCredentials {
-  id           Int      @id @default(autoincrement())
-  passwordHash String
-  createdAt    DateTime @default(now())
-  updatedAt    DateTime @updatedAt
+datasource db {
+  provider = "sqlite"
+  url      = env("DATABASE_URL")
 }
 
-model ChatSession {
-  id        Int       @id @default(autoincrement())
-  title     String?
-  createdAt DateTime  @default(now())
-  updatedAt DateTime  @updatedAt
-  messages  Message[]
-}
-
-model Message {
-  id            Int         @id @default(autoincrement())
-  chatSession   ChatSession @relation(fields: [chatSessionId], references: [id])
-  chatSessionId Int
-  senderRole    String
-  content       String
-  tokensUsed    Int?
-  createdAt     DateTime    @default(now())
-}
-
-model APIUsageLog {
-  id             Int          @id @default(autoincrement())
-  chatSessionId  Int?
-  endpoint       String
-  requestPayload String
-  responsePayload String
-  requestTokens  Int?
-  responseTokens Int?
-  totalTokens    Int?
-  cost           Float?
-  createdAt      DateTime     @default(now())
+model UsageLog {
+  id Int  @id @default(autoincrement())
+  promptTokens Int
+  completionTokens Int
+  model String
+  cost Decimal @default(0.0)
+  timestamp DateTime @default(now())
 }
