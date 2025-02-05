@@ -38,11 +38,11 @@ export const MarkdownViewer: FC<MarkdownViewerProps> = ({ markdown }) => {
         components={{
           code: (props) => <CodeBlock {...props} />,
           // Markdown の各要素に Chakra UI のコンポーネントを使用
-          p: (props) => <Box as="p" fontSize="lg" marginY={2} {...props} />,
+          p: (props) => <Box as="p" marginY={2} {...props} />,
           h1: (props) => (
             <Box
               as="h1"
-              fontSize="2xl"
+              fontSize="xx-large"
               fontWeight="bold"
               marginY={5}
               {...props}
@@ -51,7 +51,7 @@ export const MarkdownViewer: FC<MarkdownViewerProps> = ({ markdown }) => {
           h2: (props) => (
             <Box
               as="h2"
-              fontSize="xx-large"
+              fontSize="xl"
               fontWeight="bold"
               marginY={4}
               {...props}
@@ -60,20 +60,16 @@ export const MarkdownViewer: FC<MarkdownViewerProps> = ({ markdown }) => {
           h3: (props) => (
             <Box
               as="h3"
-              fontSize="x-large"
+              fontSize="large"
               fontWeight="bold"
               marginY={3}
               {...props}
             />
           ),
-          ul: (props) => (
-            <List.Root pl={5} fontSize="lg" marginY={4} {...props} />
-          ),
-          ol: (props) => (
-            <List.Root pl={5} fontSize="lg" marginY={4} {...props} />
-          ),
-          li: (props) => <List.Item fontSize="lg" marginY={1} {...props} />,
-          a: (props) => <Link fontSize="lg" color="blue.500" {...props} />,
+          ul: (props) => <List.Root pl={5} marginY={4} {...props} />,
+          ol: (props) => <List.Root pl={5} marginY={4} {...props} />,
+          li: (props) => <List.Item marginY={1} {...props} />,
+          a: (props) => <Link color="blue.500" {...props} />,
           pre: PreTag,
         }}
       />

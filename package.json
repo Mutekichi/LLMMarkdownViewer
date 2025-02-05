@@ -32,6 +32,7 @@
     "react-syntax-highlighter": "^15.6.1",
     "react-three": "^0.9.7",
     "react-tsparticles": "^2.12.2",
+    "recharts": "^2.15.1",
     "rehype-katex": "^7.0.1",
     "remark-gfm": "^4.0.0",
     "remark-math": "^6.0.0",

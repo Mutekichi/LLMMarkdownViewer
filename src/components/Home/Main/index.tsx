@@ -1,7 +1,9 @@
 'use client';
+import { DialogRoot } from '@/components/ui/dialog';
 import { Switch } from '@/components/ui/switch';
 import { Tooltip } from '@/components/ui/tooltip';
-import { MessageDetail, useOpenai } from '@/hooks/useOpenai';
+import { useOpenai } from '@/hooks/useOpenai';
+import { checkInputLength, excludeSystemMessages } from '@/utils/chatUtils';
 import {
   Box,
   Button,
@@ -20,7 +22,10 @@ import {
 } from '../../../config/llm-models';
 import CustomTextInput from '../../CustomInput';
 import { PopoverSelect, PopoverSelectOption } from '../../PopoverSelect';
+import { AppHeader } from '../AppHeader';
 import { MessageHistory } from '../MessageHistory';
+
+import { AnalyticsDialog } from '../AnalyticsDialog';
 
 const createModelOptions = (): PopoverSelectOption<OpenaiModelType>[] => {
   return Object.entries(OPENAI_MODEL_DISPLAY_NAMES).map(([value, label]) => ({
@@ -59,9 +64,10 @@ const Main: FC = () => {
     temporaryStreamResponse: temporaryTemporaryStreamResponse,
     // } = useMockOpenai();
   } = useOpenai();
-  const [isOpen, setIsOpen] = useState(false);
+  const [isModelSelectPopoverOpen, setIsModelSelectPopoverOpen] =
+    useState(false);
   const [isChecked, setIsChecked] = useState(false);
-
+  const [isAnalyticsOpen, setIsAnalyticsOpen] = useState(false);
   const [model, setModel] = useState<OpenaiModelType>(OpenaiModelType.GPT4o);
 
   const onTemporaryChatButtonClick = () => {
@@ -75,14 +81,24 @@ const Main: FC = () => {
       w="100%"
       h="100%"
       maxH="100%"
-      gap={4}
+      gap={0}
       justify="space-between"
       bgColor="#f5f5f5"
       boxSizing="border-box"
       pb={2}
       position="relative"
     >
-      <Box h="50" />
+      {/* we need to wrap AppHeader and AnalyticsDialog in DialogRoot to enable DialogRoot's context */}
+      <DialogRoot
+        open={isAnalyticsOpen}
+        onOpenChange={(e) => setIsAnalyticsOpen(e.open)}
+        size="cover"
+        placement="center"
+        motionPreset="slide-in-bottom"
+      >
+        <AppHeader />
+        <AnalyticsDialog />
+      </DialogRoot>
       <VStack flex="1" overflowY="auto" w="100%" pb={4} minH="20vh">
         <MessageHistory
           messages={excludeSystemMessages(messageDetails)}
@@ -112,14 +128,13 @@ const Main: FC = () => {
             </VStack>
             <MessageHistory
               messages={excludeSystemMessages(temporaryMessageDetails)}
-              // chatMessages={temporaryChatMessages}
               streaming={temporaryIsLoading}
               streamingMessage={temporaryOutput}
             />
           </VStack>
         )}
       </VStack>
-      <VStack w="100%" gap={2} justify="space-between" bgColor="#f5f5f5">
+      <VStack w="100%" gap={2} pt={4} justify="space-between" bgColor="#f5f5f5">
         <Center w="80%">
           <CustomTextInput
             onChange={(value) => setInputText(value)}
@@ -142,10 +157,10 @@ const Main: FC = () => {
             options={createModelOptions()}
             value={model}
             onChange={setModel}
-            isOpen={isOpen}
-            setIsOpen={setIsOpen}
-            onOpen={() => setIsOpen(true)}
-            onClose={() => setIsOpen(false)}
+            isOpen={isModelSelectPopoverOpen}
+            setIsOpen={setIsModelSelectPopoverOpen}
+            onOpen={() => setIsModelSelectPopoverOpen(true)}
+            onClose={() => setIsModelSelectPopoverOpen(false)}
             disabled={isLoading}
             tooltipLabelOnDisabled="You can't change the model while generating."
           />
@@ -218,22 +233,3 @@ const Main: FC = () => {
 };
 
 export default Main;
-
-const excludeSystemMessages = (
-  chatMessages: MessageDetail[],
-): MessageDetail[] => {
-  // first message is always system message
-  return chatMessages.slice(1);
-  // return chatMessages;
-  // return chatMessages.filter((message) => message.role !== 'system');
-};
-
-const checkInputLength = (inputText: string): boolean => {
-  return inputText.length > 1;
-};
-
-const checkInputIncludesOnlyAvailableCharacters = (
-  inputText: string,
-): boolean => {
-  return /^[a-zA-Z0-9!@#$%^&*()_+\-=\[\]{};':"\\|,.<>\/? \n]*$/.test(inputText);
-};
