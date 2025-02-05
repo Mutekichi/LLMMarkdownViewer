@@ -1,10 +1,9 @@
+import { createChatStream } from '@/lib/openaiService';
+import { handleStreamResponse, logUsage } from '@/lib/streamHandler';
 import OpenAI from 'openai';
 import { useCallback, useEffect, useState } from 'react';
-import {
-  calculateCost,
-  OPENAI_MODEL_API_NAMES,
-  OpenaiModelType,
-} from '../config/llm-models';
+import { OpenaiModelType } from '../config/llm-models';
+import { useSystemPrompt } from './useSystemPrompt';
 
 export interface ChatMessage {
   role: 'user' | 'assistant';
@@ -34,12 +33,11 @@ export interface UseOpenaiReturn {
     model: OpenaiModelType,
     image?: File,
   ) => Promise<void>;
-  clearOutput: () => void;
   stopGeneration: boolean;
   setStopGeneration: (stop: boolean) => void;
   chatMessages: ChatMessage[];
   messageDetails: MessageDetail[];
-  clearAllHistory: () => void;
+  resetHistory: () => void;
   temporaryStreamResponse: (
     prompt: string,
     model: OpenaiModelType,
@@ -56,93 +54,126 @@ export const useOpenai = (): UseOpenaiReturn => {
   const [chatMessages, setChatMessages] = useState<ChatMessage[]>([]);
   const [messageDetails, setMessageDetails] = useState<MessageDetail[]>([]);
 
-  const [systemPrompt, setSystemPrompt] = useState<string>('');
+  const { systemPrompt } = useSystemPrompt();
+  const sampleContent = `# Markdown記法サンプル
+
+  めちゃくちゃ長い文章の表示は、どのようになるのでしょうか？確認したいですよね。今、その長い文章がどのように出力されるかのサンプルとして、この文章が生成されています。
+  
+  ## テキストスタイル
+  **太字テキスト**
+  *イタリック*
+  ~~打ち消し線~~
+  \`インラインコード\`
+  
+  ## リンク
+  [Google](https://www.google.com)
+  
+  ## リスト
+  - 項目1
+    - ネスト項目1-1
+    - ネスト項目1-2
+  
+  ## Math
+  $\\frac{1}{2}$ + $\\frac{1}{3}$ = $\\frac{5}{6}$ のように、数式を記述できます。
+  
+  改行するとこのようになります。
+  
+  $$ E = mc^2 $$
+  
+  
+  ## コードブロック
+  \`\`\`python
+  def hello():
+      print("Hello, World!")
+  \`\`\``;
 
   useEffect(() => {
     const loadSystemPrompt = async () => {
-      try {
-        const response = await fetch('/prompts/system.txt');
-        if (!response.ok) {
-          throw new Error('Failed to load system prompt');
-        }
-        const prompt = await response.text();
-        setSystemPrompt(prompt);
-        // set system prompt as the initial message
-        // NOTE: this should not be seen on the UI
-        // role: 'system' cannot be applied to some models, so it is not used
-        setChatMessages([{ role: 'user', content: prompt }]);
-        setMessageDetails([
-          { role: 'user', content: prompt, timestamp: new Date() },
-        ]);
+      // set system prompt as the initial message
+      // NOTE: this should not be seen on the UI
+      // role: 'system' cannot be applied to some models, so it is not used
+      setChatMessages([{ role: 'user', content: systemPrompt }]);
+      setMessageDetails([
+        { role: 'user', content: systemPrompt, timestamp: new Date() },
+      ]);
 
-        // TODO: remove this sample content
-        const sampleContent = `# Markdown記法サンプル
-
-めちゃくちゃ長い文章の表示は、どのようになるのでしょうか？確認したいですよね。今、その長い文章がどのように出力されるかのサンプルとして、この文章が生成されています。
-
-## テキストスタイル
-**太字テキスト**
-*イタリック*
-~~打ち消し線~~
-\`インラインコード\`
-
-## リンク
-[Google](https://www.google.com)
-
-## リスト
-- 項目1
-  - ネスト項目1-1
-  - ネスト項目1-2
-
-## Math
-$\\frac{1}{2}$ + $\\frac{1}{3}$ = $\\frac{5}{6}$ のように、数式を記述できます。
-
-改行するとこのようになります。
-
-$$ E = mc^2 $$
-
-
-## コードブロック
-\`\`\`python
-def hello():
-    print("Hello, World!")
-\`\`\``;
-
-        setChatMessages((prev) => [
-          ...prev,
-          { role: 'assistant', content: sampleContent },
-        ]);
-        setMessageDetails((prev) => [
-          ...prev,
-          {
-            role: 'assistant',
-            content: sampleContent,
-            timestamp: new Date(),
-          },
-        ]);
-      } catch (err) {
-        const errorMsg =
-          err instanceof Error ? err.message : 'Failed to load system prompt';
-        setError(errorMsg);
-        setMessageDetails((prev) => [
-          ...prev,
-          { role: 'error', content: errorMsg, timestamp: new Date() },
-        ]);
-      }
+      setChatMessages((prev) => [
+        ...prev,
+        { role: 'assistant', content: sampleContent },
+      ]);
+      setMessageDetails((prev) => [
+        ...prev,
+        {
+          role: 'assistant',
+          content: sampleContent,
+          timestamp: new Date(),
+        },
+      ]);
     };
 
     loadSystemPrompt();
   }, []);
 
-  const clearOutput = useCallback(() => {
+  const addMessage = useCallback(
+    (message?: ChatMessage, detail?: MessageDetail) => {
+      message && setChatMessages((prev) => [...prev, message]);
+      detail && setMessageDetails((prev) => [...prev, detail]);
+    },
+    [],
+  );
+
+  const resetHistory = useCallback(() => {
     setOutput('');
     setError(null);
-    setChatMessages([{ role: 'user', content: systemPrompt }]);
-    setMessageDetails([
-      { role: 'user', content: systemPrompt, timestamp: new Date() },
-    ]);
+    setChatMessages(
+      systemPrompt ? [{ role: 'user', content: systemPrompt }] : [],
+    );
+    setMessageDetails(
+      systemPrompt
+        ? [{ role: 'user', content: systemPrompt, timestamp: new Date() }]
+        : [],
+    );
+    setIsLoading(false);
+    setStopGeneration(false);
   }, [systemPrompt]);
 
+  /**
+   * Handles streaming responses from the OpenAI API.
+   *
+   * - Reads text chunks from the stream and updates the `output` state.
+   * - Stops if `stopGeneration` is true.
+   * - Calls `onComplete` with the final response and usage info.
+   * - Logs usage if provided by the API.
+   */
+  const processStream = useCallback(
+    async (
+      stream: AsyncIterable<any>,
+      model: OpenaiModelType,
+      onComplete: (response: string, usage?: any) => void,
+    ) => {
+      const { fullResponse, usageDetail } = await handleStreamResponse(
+        stream,
+        () => stopGeneration,
+        (chunk) => setOutput((prev) => prev + chunk),
+      );
+      if (!stopGeneration && fullResponse) {
+        onComplete(fullResponse, usageDetail);
+        if (usageDetail) {
+          await logUsage(model, usageDetail);
+        }
+      }
+    },
+    [stopGeneration],
+  );
+
+  /**
+   * Sends a prompt to the OpenAI API and streams the response back.
+   *
+   * - Resets states (loading, error, etc.) before sending.
+   * - Adds the user's message to chat history.
+   * - Streams the response using `processStream`.
+   * - Appends the assistant's answer to the conversation on completion.
+   */
   const streamResponse = useCallback(
     async (prompt: string, model: OpenaiModelType, image?: File) => {
       try {
@@ -151,107 +182,51 @@ def hello():
         setStopGeneration(false);
         setOutput('');
 
-        setChatMessages((prev) => [...prev, { role: 'user', content: prompt }]);
-        setMessageDetails((prev) => [
-          ...prev,
+        addMessage(
+          { role: 'user', content: prompt },
           { role: 'user', content: prompt, model, timestamp: new Date() },
-        ]);
+        );
 
-        let payload: any = {
-          model: OPENAI_MODEL_API_NAMES[model],
-          messages: [...chatMessages, { role: 'user', content: prompt }],
-          stream: true,
-          stream_options: {
-            include_usage: true,
-          },
-        };
+        const messages = [...chatMessages, { role: 'user', content: prompt }];
+        const stream = await createChatStream(messages, model, image);
 
-        if (image) {
-          const base64Image = await convertFileToBase64(image);
-          payload.messages[payload.messages.length - 1].content = [
-            { type: 'text', text: prompt },
-            { type: 'image_url', image_url: { url: base64Image } },
-          ];
-        }
-
-        const stream = await openai.chat.completions.create(payload);
-
-        let fullResponse = '';
-        let usageDetail: any = null;
-        for await (const chunk of stream as any) {
-          if (stopGeneration) break;
-          const content = chunk.choices[0]?.delta?.content || '';
-          fullResponse += content;
-          setOutput((prev) => prev + content);
-          if (chunk.usage) {
-            usageDetail = chunk.usage;
-          }
-        }
-
-        if (!stopGeneration) {
-          setChatMessages((prev) => [
-            ...prev,
+        await processStream(stream, model, (fullResponse, usageDetail) => {
+          addMessage(
             { role: 'assistant', content: fullResponse },
-          ]);
-          setMessageDetails((prev) => [
-            ...prev,
             {
               role: 'assistant',
               content: fullResponse,
               model,
               timestamp: new Date(),
-              inputTokens: usageDetail.prompt_tokens,
-              outputTokens: usageDetail.completion_tokens,
+              inputTokens: usageDetail?.prompt_tokens,
+              outputTokens: usageDetail?.completion_tokens,
             },
-          ]);
-          if (usageDetail) {
-            const promptTokens = usageDetail.prompt_tokens;
-            const completionTokens = usageDetail.completion_tokens;
-            const cost = calculateCost(model, promptTokens, completionTokens);
-            try {
-              await fetch('/api/usage-logs', {
-                method: 'POST',
-                headers: {
-                  'Content-Type': 'application/json',
-                },
-                body: JSON.stringify({
-                  promptTokens,
-                  completionTokens,
-                  model,
-                  cost,
-                }),
-              });
-            } catch (error) {
-              console.error('Failed to log usage', error);
-            }
-          }
-        }
+          );
+        });
       } catch (err) {
         const errorMsg =
-          err instanceof Error ? err.message : '予期せぬエラーが発生しました';
+          err instanceof Error ? err.message : 'An unexpected error occurred.';
         setError(errorMsg);
-        setMessageDetails((prev) => [
-          ...prev,
-          { role: 'error', content: errorMsg, timestamp: new Date() },
-        ]);
+        addMessage(undefined, {
+          role: 'error',
+          content: errorMsg,
+          timestamp: new Date(),
+        });
       } finally {
         setIsLoading(false);
       }
     },
-    [chatMessages, stopGeneration],
+    [chatMessages, addMessage, processStream],
   );
 
-  const clearAllHistory = useCallback(() => {
-    setOutput('');
-    setError(null);
-    setChatMessages([{ role: 'user', content: systemPrompt }]);
-    setMessageDetails([
-      { role: 'user', content: systemPrompt, timestamp: new Date() },
-    ]);
-    setIsLoading(false);
-    setStopGeneration(false);
-  }, [systemPrompt]);
-
+  /**
+   * Sends a prompt using only the system prompt (if any) and the given prompt, ignoring previous messages.
+   *
+   * - Resets states (loading, error, etc.) before sending.
+   * - Optionally includes the system prompt and the user's prompt.
+   * - Streams the response using `processStream`.
+   * - Appends the assistant's answer to the conversation on completion.
+   */
   const temporaryStreamResponse = useCallback(
     async (prompt: string, model: OpenaiModelType, image?: File) => {
       try {
@@ -260,124 +235,59 @@ def hello():
         setStopGeneration(false);
         setOutput('');
 
-        const temporaryMessages: ChatMessage[] = [
-          { role: 'user', content: systemPrompt },
+        const temporaryMessages = systemPrompt
+          ? [
+              { role: 'user', content: systemPrompt },
+              { role: 'user', content: prompt },
+            ]
+          : [{ role: 'user', content: prompt }];
+
+        addMessage(
           { role: 'user', content: prompt },
-        ];
-
-        setChatMessages((prev) => [...prev, { role: 'user', content: prompt }]);
-        setMessageDetails((prev) => [
-          ...prev,
           { role: 'user', content: prompt, model, timestamp: new Date() },
-        ]);
+        );
 
-        let payload: any = {
-          model: OPENAI_MODEL_API_NAMES[model],
-          messages: temporaryMessages,
-          stream: true,
-          stream_options: {
-            include_usage: true,
-          },
-        };
+        const stream = await createChatStream(temporaryMessages, model, image);
 
-        if (image) {
-          const base64Image = await convertFileToBase64(image);
-          payload.messages[payload.messages.length - 1].content = [
-            { type: 'text', text: prompt },
-            { type: 'image_url', image_url: { url: base64Image } },
-          ];
-        }
-
-        const stream = await openai.chat.completions.create(payload);
-        let fullResponse = '';
-        let usageDetail: any = null;
-
-        for await (const chunk of stream as any) {
-          if (stopGeneration) break;
-          const content = chunk.choices[0]?.delta?.content || '';
-          fullResponse += content;
-          setOutput((prev) => prev + content);
-          if (chunk.usage) {
-            usageDetail = chunk.usage;
-          }
-        }
-
-        if (!stopGeneration && fullResponse) {
-          setChatMessages((prev) => [
-            ...prev,
+        await processStream(stream, model, (fullResponse, usageDetail) => {
+          addMessage(
             { role: 'assistant', content: fullResponse },
-          ]);
-          setMessageDetails((prev) => [
-            ...prev,
             {
               role: 'assistant',
               content: fullResponse,
               model,
               timestamp: new Date(),
-              inputTokens: usageDetail.prompt_tokens,
-              outputTokens: usageDetail.completion_tokens,
+              inputTokens: usageDetail?.prompt_tokens,
+              outputTokens: usageDetail?.completion_tokens,
             },
-          ]);
-          if (usageDetail) {
-            const promptTokens = usageDetail.prompt_tokens;
-            const completionTokens = usageDetail.completion_tokens;
-            const cost = calculateCost(model, promptTokens, completionTokens);
-            try {
-              await fetch('/api/usage-logs', {
-                method: 'POST',
-                headers: {
-                  'Content-Type': 'application/json',
-                },
-                body: JSON.stringify({
-                  promptTokens,
-                  completionTokens,
-                  model,
-                  cost,
-                }),
-              });
-            } catch (error) {
-              console.error('Failed to log usage', error);
-            }
-          }
-        }
+          );
+        });
       } catch (err) {
         const errorMsg =
-          err instanceof Error ? err.message : '予期せぬエラーが発生しました';
+          err instanceof Error ? err.message : 'An unexpected error occurred.';
         setError(errorMsg);
-        setMessageDetails((prev) => [
-          ...prev,
-          { role: 'error', content: errorMsg, timestamp: new Date() },
-        ]);
+        addMessage(undefined, {
+          role: 'error',
+          content: errorMsg,
+          timestamp: new Date(),
+        });
       } finally {
         setIsLoading(false);
       }
     },
-    [systemPrompt, stopGeneration],
+    [systemPrompt, addMessage, processStream],
   );
-
-  const convertFileToBase64 = (file: File): Promise<string> => {
-    return new Promise((resolve, reject) => {
-      const reader = new FileReader();
-      reader.onload = () => {
-        const base64String = reader.result as string;
-        resolve(base64String);
-      };
-      reader.onerror = reject;
-      reader.readAsDataURL(file);
-    });
-  };
 
   return {
     output,
     isLoading,
     error,
     streamResponse,
-    clearOutput,
     stopGeneration,
     setStopGeneration,
     chatMessages,
     messageDetails,
-    clearAllHistory,
+    resetHistory,
     temporaryStreamResponse,
   };
 };

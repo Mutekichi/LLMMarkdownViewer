@@ -14,7 +14,7 @@ import {
   Text,
   VStack,
 } from '@chakra-ui/react';
-import { FC, useState } from 'react';
+import { FC, useEffect, useRef, useState } from 'react';
 import { RxTrash } from 'react-icons/rx';
 import {
   OPENAI_MODEL_DISPLAY_NAMES,
@@ -36,31 +36,30 @@ const createModelOptions = (): PopoverSelectOption<OpenaiModelType>[] => {
 
 const Main: FC = () => {
   const [inputText, setInputText] = useState('');
+  const textareaRef = useRef<HTMLTextAreaElement>(null);
+
   const {
     output,
     isLoading,
     error,
     streamResponse,
-    clearOutput,
     stopGeneration,
     setStopGeneration,
     chatMessages,
     messageDetails,
-    clearAllHistory,
+    resetHistory,
   } = useOpenai();
-  // } = useMockOpenai();
 
   const {
     output: temporaryOutput,
     isLoading: temporaryIsLoading,
     error: temporaryError,
     streamResponse: temporaryStreamResponse,
-    clearOutput: temporaryClearOutput,
     stopGeneration: temporaryStopGeneration,
     setStopGeneration: temporarySetStopGeneration,
     chatMessages: temporaryChatMessages,
     messageDetails: temporaryMessageDetails,
-    clearAllHistory: temporaryClearAllHistory,
+    resetHistory: temporaryResetHistory,
     temporaryStreamResponse: temporaryTemporaryStreamResponse,
     // } = useMockOpenai();
   } = useOpenai();
@@ -72,10 +71,30 @@ const Main: FC = () => {
 
   const onTemporaryChatButtonClick = () => {
     if (isChecked) {
-      temporaryClearOutput();
+      temporaryResetHistory();
     }
     setIsChecked(!isChecked);
   };
+
+  useEffect(() => {
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key == 'Enter') {
+        // focus on textarea if the user presses Enter key and the textarea is not focused
+        textareaRef.current?.focus();
+        // prevent default behavior if the textarea is focused
+        // otherwise, the Enter will trigger the new line in the textarea
+        if (document.activeElement === textareaRef.current) {
+          e.preventDefault();
+        }
+      }
+    };
+    window.addEventListener('keydown', handleKeyDown);
+
+    return () => {
+      window.removeEventListener('keydown', handleKeyDown);
+    };
+  }, []);
+
   return (
     <VStack
       w="100%"
@@ -137,6 +156,7 @@ const Main: FC = () => {
       <VStack w="100%" gap={2} pt={4} justify="space-between" bgColor="#f5f5f5">
         <Center w="80%">
           <CustomTextInput
+            textareaRef={textareaRef}
             onChange={(value) => setInputText(value)}
             onButtonClick={(value) => {
               if (isChecked) {
@@ -215,9 +235,9 @@ const Main: FC = () => {
               borderRadius={10}
               _hover={{ bgColor: 'blackAlpha.50' }}
               onClick={() => {
-                clearAllHistory();
+                resetHistory();
                 if (isChecked) {
-                  temporaryClearAllHistory();
+                  temporaryResetHistory();
                   setIsChecked(false);
                 }
               }}

@@ -1,7 +1,8 @@
 import { Box, Button, Textarea } from '@chakra-ui/react';
-import React, { useEffect, useRef, useState } from 'react';
+import React, { useEffect, useState } from 'react';
 
 interface CustomTextInputProps {
+  textareaRef: React.RefObject<HTMLTextAreaElement>;
   placeholder?: string;
   onChange?: (value: string) => void;
   onButtonClick?: (value: string) => void;
@@ -16,6 +17,7 @@ const C_ERROR = '#ff0000';
 
 const CustomTextInput: React.FC<CustomTextInputProps> = (props) => {
   const {
+    textareaRef,
     placeholder,
     onChange,
     onButtonClick,
@@ -26,7 +28,6 @@ const CustomTextInput: React.FC<CustomTextInputProps> = (props) => {
 
   const [value, setValue] = useState('');
   const [lines, setLines] = useState(1);
-  const textareaRef = useRef<HTMLTextAreaElement>(null);
 
   const LINE_HEIGHT = 28;
   const DEFAULT_HEIGHT = LINE_HEIGHT;
