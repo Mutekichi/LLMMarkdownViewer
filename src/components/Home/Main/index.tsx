@@ -78,14 +78,12 @@ const Main: FC = () => {
 
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
-      if (e.key == 'Enter') {
+      if (e.key == 'Enter' && document.activeElement !== textareaRef.current) {
         // focus on textarea if the user presses Enter key and the textarea is not focused
         textareaRef.current?.focus();
         // prevent default behavior if the textarea is focused
         // otherwise, the Enter will trigger the new line in the textarea
-        if (document.activeElement === textareaRef.current) {
-          e.preventDefault();
-        }
+        e.preventDefault();
       }
     };
     window.addEventListener('keydown', handleKeyDown);
