@@ -18,16 +18,30 @@ export interface UsageBarChartProps {
   data: MonthlyUsage[];
 }
 
+const formatData = (data: MonthlyUsage[]): MonthlyUsage[] => {
+  return data.map((d) => {
+    return {
+      ...d,
+      cost: d.cost / 1000000,
+    };
+  });
+};
+
 export const UsageBarChart: FC<UsageBarChartProps> = (props) => {
   const { data } = props;
   console.log(data);
   return (
     <Box w="100%" h="300px">
       <ResponsiveContainer>
-        <BarChart data={data}>
+        <BarChart data={formatData(data)}>
           <XAxis dataKey="month" />
           <YAxis />
-          <Tooltip cursor={false} />
+          <Tooltip
+            cursor={false}
+            formatter={(value: number): string => {
+              return '$' + value.toFixed(4);
+            }}
+          />
           <Bar dataKey="cost" fill="#777777" name="cost" />
         </BarChart>
       </ResponsiveContainer>

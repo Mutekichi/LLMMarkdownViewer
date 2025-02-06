@@ -67,7 +67,7 @@ const Main: FC = () => {
     useState(false);
   const [isChecked, setIsChecked] = useState(false);
   const [isAnalyticsOpen, setIsAnalyticsOpen] = useState(false);
-  const [model, setModel] = useState<OpenaiModelType>(OpenaiModelType.GPT4o);
+  const [model, setModel] = useState<OpenaiModelType>(OpenaiModelType.o1mini);
 
   const onTemporaryChatButtonClick = () => {
     if (isChecked) {

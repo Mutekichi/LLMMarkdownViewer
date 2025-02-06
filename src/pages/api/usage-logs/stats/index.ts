@@ -21,26 +21,26 @@ async function aggregateMonthlyUsage({ period }: AggregateMonthlyUsageParams) {
     const monthlyUsage = await prisma.$queryRaw<
       AggregateMonthlyUsageResponse[]
     >`
-            SELECT
-                strftime('%Y-%m', datetime('timestamp', '+9 hours')) AS month,
-                SUM(cost) AS cost
-            FROM UsageLog
-            WHERE timestamp BETWEEN ${period.start} AND ${period.end}
-            GROUP BY month
-            ORDER BY month ASC
-        `;
+  SELECT
+      strftime('%Y-%m', created_at / 1000, 'unixepoch', '+9 hours') AS month,
+      SUM(cost) AS cost
+  FROM UsageLog
+  WHERE created_at BETWEEN ${period.start} AND ${period.end}
+  GROUP BY month
+  ORDER BY month ASC
+`;
     return monthlyUsage;
   } else {
     const monthlyUsage = await prisma.$queryRaw<
       AggregateMonthlyUsageResponse[]
     >`
-            SELECT
-                  strftime('%Y-%m', 'timestamp') AS month,
-                  SUM(cost) AS cost
-            FROM UsageLog
-            GROUP BY month
-            ORDER BY month ASC;
-      `;
+SELECT
+  strftime('%Y-%m', created_at / 1000, 'unixepoch', '+9 hours') AS month,
+  SUM(cost) AS cost
+FROM UsageLog
+GROUP BY month
+ORDER BY month ASC;
+`;
     console.log('monthlyUsage', monthlyUsage);
     return monthlyUsage;
   }

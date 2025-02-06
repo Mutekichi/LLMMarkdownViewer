@@ -1,4 +1,4 @@
-import { Box, FormatNumber, HStack, Stat } from '@chakra-ui/react';
+import { FormatNumber, HStack, Stat, VStack } from '@chakra-ui/react';
 import { FC, useEffect, useState } from 'react';
 import { UsageBarChart } from './UsageBarChart';
 
@@ -60,7 +60,7 @@ export const UsageSummaryPage: FC = () => {
   console.log('monthly usage', monthlyUsage);
 
   return (
-    <Box p={6}>
+    <VStack p={6} gap={10} align="start">
       <HStack w="50%">
         <Stat.Root size="lg">
           <Stat.Label>Today</Stat.Label>
@@ -83,7 +83,7 @@ export const UsageSummaryPage: FC = () => {
           </Stat.ValueText>
         </Stat.Root>
       </HStack>
-      <UsageBarChart data={monthlyUsage} />
-    </Box>
+      <UsageBarChart data={extendMonthlyUsage(monthlyUsage)} />
+    </VStack>
   );
 };
