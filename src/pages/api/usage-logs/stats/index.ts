@@ -15,32 +15,54 @@ export interface AggregateMonthlyUsageResponse {
   cost: number;
 }
 
+async function fetchDailyUsage() {
+  const dailyUsage = await prisma.$queryRaw<AggregateMonthlyUsageResponse[]>`
+    SELECT
+        SUM(cost) AS cost
+    FROM UsageLog
+    WHERE created_at BETWEEN
+          strftime('%s', 'now', '+9 hours', 'start of day', '-9 hours') * 1000
+      AND strftime('%s', 'now') * 1000
+  `;
+  return dailyUsage;
+}
+
+async function fetchWeeklyUsage() {
+  const weeklyUsage = await prisma.$queryRaw<AggregateMonthlyUsageResponse[]>`
+    SELECT
+        SUM(cost) AS cost
+    FROM UsageLog
+    WHERE created_at BETWEEN strftime('%s', 'now', '-6 days') * 1000 AND strftime('%s', 'now') * 1000
+  `;
+  return weeklyUsage;
+}
+
 async function aggregateMonthlyUsage({ period }: AggregateMonthlyUsageParams) {
   // TODO: verify that the period is valid
   if (period) {
     const monthlyUsage = await prisma.$queryRaw<
       AggregateMonthlyUsageResponse[]
     >`
-  SELECT
-      strftime('%Y-%m', created_at / 1000, 'unixepoch', '+9 hours') AS month,
-      SUM(cost) AS cost
-  FROM UsageLog
-  WHERE created_at BETWEEN ${period.start} AND ${period.end}
-  GROUP BY month
-  ORDER BY month ASC
-`;
+      SELECT
+          strftime('%Y-%m', created_at / 1000, 'unixepoch', '+9 hours') AS month,
+          SUM(cost) AS cost
+      FROM UsageLog
+      WHERE created_at BETWEEN ${period.start} AND ${period.end}
+      GROUP BY month
+      ORDER BY month ASC
+    `;
     return monthlyUsage;
   } else {
     const monthlyUsage = await prisma.$queryRaw<
       AggregateMonthlyUsageResponse[]
     >`
-SELECT
-  strftime('%Y-%m', created_at / 1000, 'unixepoch', '+9 hours') AS month,
-  SUM(cost) AS cost
-FROM UsageLog
-GROUP BY month
-ORDER BY month ASC;
-`;
+        SELECT
+          strftime('%Y-%m', created_at / 1000, 'unixepoch', '+9 hours') AS month,
+          SUM(cost) AS cost
+        FROM UsageLog
+        GROUP BY month
+        ORDER BY month ASC;
+    `;
     console.log('monthlyUsage', monthlyUsage);
     return monthlyUsage;
   }
@@ -68,6 +90,12 @@ export default async function handler(
             : undefined;
         const monthlyUsage = await aggregateMonthlyUsage({ period });
         return res.status(200).json(monthlyUsage);
+      } else if (group === 'weekly') {
+        const weeklyUsage = await fetchWeeklyUsage();
+        return res.status(200).json(weeklyUsage);
+      } else if (group === 'daily') {
+        const dailyUsage = await fetchDailyUsage();
+        return res.status(200).json(dailyUsage);
       } else {
         return res.status(400).json({ error: 'Invalid group' });
       }

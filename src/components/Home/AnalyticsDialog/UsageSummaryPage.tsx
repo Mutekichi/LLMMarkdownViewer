@@ -2,13 +2,16 @@ import { FormatNumber, HStack, Stat, VStack } from '@chakra-ui/react';
 import { FC, useEffect, useState } from 'react';
 import { UsageBarChart } from './UsageBarChart';
 
-// sample
-const todayUsage = {
-  cost: 10000,
-};
-
 interface MonthlyUsage {
   month: string; // YYYY-MM
+  cost: number;
+}
+
+interface WeeklyUsage {
+  cost: number;
+}
+
+interface DaylyUsage {
   cost: number;
 }
 
@@ -40,12 +43,38 @@ const extendMonthlyUsage = (monthlyUsage: MonthlyUsage[]): MonthlyUsage[] => {
 };
 
 export const UsageSummaryPage: FC = () => {
-  const [monthlyUsage, setMonthlyUsage] = useState<MonthlyUsage[]>([]);
+  const [monthlyUsage, setMonthlyUsage] = useState<MonthlyUsage[]>([
+    {
+      month: '1900-01',
+      cost: 0,
+    },
+  ]);
+  const [weeklyUsage, setWeeklyUsage] = useState<WeeklyUsage[]>([
+    {
+      cost: 0,
+    },
+  ]);
+  const [dailyUsage, setDailyUsage] = useState<DaylyUsage[]>([
+    {
+      cost: 0,
+    },
+  ]);
+
   useEffect(() => {
     const fetchMonthlyUsage = async () => {
       const response = await fetch('/api/usage-logs/stats?group=monthly');
       const data = await response.json();
       setMonthlyUsage(data);
+    };
+    const fetchWeeklyUsage = async () => {
+      const response = await fetch('/api/usage-logs/stats?group=weekly');
+      const data = await response.json();
+      setWeeklyUsage(data);
+    };
+    const fetchDailyUsage = async () => {
+      const response = await fetch('/api/usage-logs/stats?group=daily');
+      const data = await response.json();
+      setDailyUsage(data);
     };
 
     fetchMonthlyUsage()
@@ -55,9 +84,23 @@ export const UsageSummaryPage: FC = () => {
       .catch((error) => {
         console.error('Failed to fetch monthly usage', error);
       });
-  }, []);
 
-  console.log('monthly usage', monthlyUsage);
+    fetchWeeklyUsage()
+      .then(() => {
+        // setWeeklyUsage(extendMonthlyUsage(weeklyUsage)),
+      })
+      .catch((error) => {
+        console.error('Failed to fetch weekly usage', error);
+      });
+
+    fetchDailyUsage()
+      .then(() => {
+        // setDailyUsage(extendMonthlyUsage(dailyUsage)),
+      })
+      .catch((error) => {
+        console.error('Failed to fetch daily usage', error);
+      });
+  }, []);
 
   return (
     <VStack p={6} gap={10} align="start">
@@ -66,7 +109,7 @@ export const UsageSummaryPage: FC = () => {
           <Stat.Label>Today</Stat.Label>
           <Stat.ValueText>
             <FormatNumber
-              value={todayUsage.cost / 1000000}
+              value={dailyUsage[0].cost / 1000000}
               style="currency"
               currency="USD"
             />
@@ -76,7 +119,7 @@ export const UsageSummaryPage: FC = () => {
           <Stat.Label>This week</Stat.Label>
           <Stat.ValueText>
             <FormatNumber
-              value={todayUsage.cost / 1000000}
+              value={weeklyUsage[0].cost / 1000000}
               style="currency"
               currency="USD"
             />
