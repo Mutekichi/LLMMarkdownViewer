@@ -20,6 +20,7 @@ export interface UsageBarChartProps {
 
 export const UsageBarChart: FC<UsageBarChartProps> = (props) => {
   const { data } = props;
+  console.log(data);
   return (
     <Box w="100%" h="300px">
       <ResponsiveContainer>
@@ -27,8 +28,7 @@ export const UsageBarChart: FC<UsageBarChartProps> = (props) => {
           <XAxis dataKey="month" />
           <YAxis />
           <Tooltip cursor={false} />
-          {/* tokens の棒グラフ */}
-          <Bar dataKey="cost" fill="#777777" name="Tokens" />
+          <Bar dataKey="cost" fill="#777777" name="cost" />
         </BarChart>
       </ResponsiveContainer>
     </Box>

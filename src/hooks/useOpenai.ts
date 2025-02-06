@@ -1,5 +1,6 @@
 import { createChatStream } from '@/lib/openaiService';
-import { handleStreamResponse, logUsage } from '@/lib/streamHandler';
+import { handleStreamResponse } from '@/lib/streamHandler';
+import { logUsage } from '@/lib/usageServices';
 import OpenAI from 'openai';
 import { useCallback, useEffect, useState } from 'react';
 import { OpenaiModelType } from '../config/llm-models';
