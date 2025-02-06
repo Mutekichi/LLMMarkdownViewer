@@ -56,3 +56,8 @@ firebaseSecretKey.json
 # mocks
 /mocks
 
+# Prisma-related files to ignore
+.env
+prisma/.env
+prisma/dev.db
+prisma/generated/

@@ -1,7 +1,8 @@
 import { Box, Button, Textarea } from '@chakra-ui/react';
-import React, { useEffect, useRef, useState } from 'react';
+import React, { useEffect, useState } from 'react';
 
 interface CustomTextInputProps {
+  textareaRef: React.RefObject<HTMLTextAreaElement>;
   placeholder?: string;
   onChange?: (value: string) => void;
   onButtonClick?: (value: string) => void;
@@ -14,8 +15,11 @@ const C_DEFAULT = '#000000';
 const C_PENDING = '#cccccc';
 const C_ERROR = '#ff0000';
 
+const MAX_HEIGHT = 400;
+
 const CustomTextInput: React.FC<CustomTextInputProps> = (props) => {
   const {
+    textareaRef,
     placeholder,
     onChange,
     onButtonClick,
@@ -25,8 +29,6 @@ const CustomTextInput: React.FC<CustomTextInputProps> = (props) => {
   } = props;
 
   const [value, setValue] = useState('');
-  const [lines, setLines] = useState(1);
-  const textareaRef = useRef<HTMLTextAreaElement>(null);
 
   const LINE_HEIGHT = 28;
   const DEFAULT_HEIGHT = LINE_HEIGHT;
@@ -63,9 +65,9 @@ const CustomTextInput: React.FC<CustomTextInputProps> = (props) => {
     if (textarea) {
       textarea.style.height = `${LINE_HEIGHT}px`;
       const newHeight = Math.max(textarea.scrollHeight, LINE_HEIGHT);
-      textarea.style.height = `${newHeight}px`;
-      const newLines = Math.ceil(newHeight / LINE_HEIGHT);
-      setLines(newLines);
+      const limitedHeight = Math.min(newHeight, MAX_HEIGHT);
+      textarea.style.height = `${limitedHeight}px`;
+      const newLines = Math.ceil(limitedHeight / LINE_HEIGHT);
     }
   };
 
@@ -80,7 +82,6 @@ const CustomTextInput: React.FC<CustomTextInputProps> = (props) => {
   return (
     <Box
       width="100%"
-      height={`${Math.max(lines, 1) * LINE_HEIGHT}px`}
       borderRadius="50px"
       borderWidth="4px"
       border={
@@ -108,8 +109,8 @@ const CustomTextInput: React.FC<CustomTextInputProps> = (props) => {
         color={inputDisabled ? C_PENDING : C_DEFAULT}
         fontSize="1.2rem"
         resize="none"
+        overflowY="auto"
         py={6}
-        overflow="hidden"
         _placeholder={{ color: 'gray.500' }}
         _focus={{ outline: 'none' }}
         lineHeight={`${LINE_HEIGHT}px`}

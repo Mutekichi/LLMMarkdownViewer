@@ -1,0 +1,17 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = env("DATABASE_URL")
+}
+
+model UsageLog {
+  id               Int      @id @default(autoincrement())
+  promptTokens     Int
+  completionTokens Int
+  model            String
+  cost             Decimal  @default(0.0)
+  created_at       DateTime @default(now())
+}
