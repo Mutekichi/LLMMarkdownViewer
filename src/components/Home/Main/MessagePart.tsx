@@ -5,7 +5,7 @@ import { Text, VStack } from '@chakra-ui/react';
 import { FC, memo } from 'react';
 import { MessageHistory } from '../MessageHistory';
 
-interface MessageHisotoryPart {
+interface MessageHistoryPartProps {
   isTemporaryChatOpen: boolean;
   temporaryMessageDetails: MessageDetail[];
   temporaryIsLoading: boolean;
@@ -17,9 +17,11 @@ interface MessageHisotoryPart {
   openTemporaryChat: () => void;
   closeTemporaryChat: () => void;
   containerRef: React.RefObject<HTMLDivElement>;
+  selectedText: string;
+  setSelectedText: (text: string) => void;
 }
 
-export const MessageHistoryPart: FC<MessageHisotoryPart> = memo((props) => {
+export const MessageHistoryPart: FC<MessageHistoryPartProps> = memo((props) => {
   const {
     isTemporaryChatOpen,
     temporaryMessageDetails,
@@ -32,7 +34,20 @@ export const MessageHistoryPart: FC<MessageHisotoryPart> = memo((props) => {
     openTemporaryChat,
     closeTemporaryChat,
     containerRef,
+    selectedText,
+    setSelectedText,
   } = props;
+
+  const handleMouseUp = () => {
+    const selection = window.getSelection();
+    if (selection && selection.toString()) {
+      setSelectedText(selection.toString());
+    }
+  };
+
+  const handleMouseLeave = () => {
+    setSelectedText('');
+  };
 
   return (
     <VStack
@@ -42,6 +57,8 @@ export const MessageHistoryPart: FC<MessageHisotoryPart> = memo((props) => {
       pb={4}
       minH="20vh"
       ref={containerRef}
+      onMouseUp={handleMouseUp}
+      onMouseLeave={handleMouseLeave}
     >
       <MessageHistory
         messages={excludeSystemMessages(messageDetails)}
@@ -67,6 +84,9 @@ export const MessageHistoryPart: FC<MessageHisotoryPart> = memo((props) => {
             <Text fontSize="1.2rem" textAlign="center">
               This conversation does not include any previous chat history and
               will not be saved.
+            </Text>
+            <Text fontSize="1.2rem" textAlign="center">
+              {selectedText}
             </Text>
           </VStack>
           <MessageHistory

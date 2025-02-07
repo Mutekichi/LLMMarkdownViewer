@@ -4,24 +4,13 @@ import { useOpenai } from '@/hooks/useOpenai';
 import { checkInputLength } from '@/utils/chatUtils';
 import { Center, VStack } from '@chakra-ui/react';
 import { FC, useCallback, useEffect, useRef, useState } from 'react';
-import {
-  OPENAI_MODEL_DISPLAY_NAMES,
-  OpenaiModelType,
-} from '../../../config/llm-models';
+import { OpenaiModelType } from '../../../config/llm-models';
 import CustomTextInput from '../../CustomInput';
-import { PopoverSelectOption } from '../../PopoverSelect';
 import { AppHeader } from '../AppHeader';
 
 import { AnalyticsDialog } from '../AnalyticsDialog';
 import { MessageHistoryPart } from './MessagePart';
 import { MessageSettingPart } from './MessageSettingPart';
-
-const createModelOptions = (): PopoverSelectOption<OpenaiModelType>[] => {
-  return Object.entries(OPENAI_MODEL_DISPLAY_NAMES).map(([value, label]) => ({
-    value: value as OpenaiModelType,
-    label,
-  }));
-};
 
 const Main: FC = () => {
   const {
@@ -53,6 +42,7 @@ const Main: FC = () => {
   const textareaRef = useRef<HTMLTextAreaElement>(null);
 
   const [inputText, setInputText] = useState('');
+  const [selectedText, setSelectedText] = useState('');
   const [model, setModel] = useState<OpenaiModelType>(OpenaiModelType.o1mini);
 
   const [isModelSelectPopoverOpen, setIsModelSelectPopoverOpen] =
@@ -155,48 +145,6 @@ const Main: FC = () => {
         <AppHeader />
         <AnalyticsDialog />
       </DialogRoot>
-      {/* <VStack
-        flex="1"
-        overflowY="auto"
-        w="100%"
-        pb={4}
-        minH="20vh"
-        ref={containerRef}
-      >
-        <MessageHistory
-          messages={excludeSystemMessages(messageDetails)}
-          // chatMessages={chatMessages}
-          streaming={isLoading}
-          streamingMessage={output}
-        />
-        {isTemporaryChatOpen && (
-          <VStack
-            w="80%"
-            gap={2}
-            justify="space-between"
-            bgColor="#eeeeee"
-            flex="1"
-            borderTopRadius={20}
-            border="1"
-            justifyContent="start"
-          >
-            <VStack p={2} gap={0}>
-              <Text fontSize="1.5rem" textAlign="center">
-                Temporary Chat
-              </Text>
-              <Text fontSize="1.2rem" textAlign="center">
-                This conversation does not include any previous chat history and
-                will not be saved.
-              </Text>
-            </VStack>
-            <MessageHistory
-              messages={excludeSystemMessages(temporaryMessageDetails)}
-              streaming={temporaryIsLoading}
-              streamingMessage={temporaryOutput}
-            />
-          </VStack>
-        )}
-      </VStack> */}
       <MessageHistoryPart
         isTemporaryChatOpen={isTemporaryChatOpen}
         temporaryMessageDetails={temporaryMessageDetails}
@@ -209,6 +157,8 @@ const Main: FC = () => {
         openTemporaryChat={onTemporaryChatButtonClick}
         closeTemporaryChat={onTemporaryChatButtonClick}
         containerRef={containerRef}
+        selectedText={selectedText}
+        setSelectedText={setSelectedText}
       />
       <VStack w="100%" gap={2} pt={4} justify="space-between" bgColor="#f5f5f5">
         <Center w="80%">
