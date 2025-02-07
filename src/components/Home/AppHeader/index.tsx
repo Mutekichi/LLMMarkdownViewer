@@ -12,6 +12,8 @@ type AppHeaderProps = {
 export const AppHeader: FC<AppHeaderProps> = (props) => {
   const { onMenuClick } = props;
 
+  console.log('re-rendering AppHeader');
+
   return (
     <Flex
       as="header"
