@@ -11,7 +11,7 @@ interface WeeklyUsage {
   cost: number;
 }
 
-interface DaylyUsage {
+interface DailyUsage {
   cost: number;
 }
 
@@ -54,7 +54,7 @@ export const UsageSummaryPage: FC = () => {
       cost: 0,
     },
   ]);
-  const [dailyUsage, setDailyUsage] = useState<DaylyUsage[]>([
+  const [dailyUsage, setDailyUsage] = useState<DailyUsage[]>([
     {
       cost: 0,
     },

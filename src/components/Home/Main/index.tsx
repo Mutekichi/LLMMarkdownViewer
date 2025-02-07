@@ -35,9 +35,6 @@ const createModelOptions = (): PopoverSelectOption<OpenaiModelType>[] => {
 };
 
 const Main: FC = () => {
-  const [inputText, setInputText] = useState('');
-  const textareaRef = useRef<HTMLTextAreaElement>(null);
-
   const {
     output,
     isLoading,
@@ -63,19 +60,17 @@ const Main: FC = () => {
     temporaryStreamResponse: temporaryTemporaryStreamResponse,
     // } = useMockOpenai();
   } = useOpenai();
+  const containerRef = useRef<HTMLDivElement>(null);
+  const textareaRef = useRef<HTMLTextAreaElement>(null);
+
+  const [inputText, setInputText] = useState('');
+  const [model, setModel] = useState<OpenaiModelType>(OpenaiModelType.o1mini);
+
   const [isModelSelectPopoverOpen, setIsModelSelectPopoverOpen] =
     useState(false);
   const [isTemporaryChatOpen, setIsTemporaryChatOpen] = useState(false);
   const [isAnalyticsOpen, setIsAnalyticsOpen] = useState(false);
-  const [model, setModel] = useState<OpenaiModelType>(OpenaiModelType.o1mini);
-  const containerRef = useRef<HTMLDivElement>(null);
-
-  // const onTemporaryChatButtonClick = () => {
-  //   if (isTemporaryChatOpen) {
-  //     temporaryResetHistory();
-  //   }
-  //   setIsTemporaryChatOpen(!isTemporaryChatOpen);
-  // };
+  const [isAutoScrollMode, setIsAutoScrollMode] = useState(false);
 
   const onTemporaryChatButtonClick = useCallback(() => {
     if (isTemporaryChatOpen) {
@@ -84,17 +79,51 @@ const Main: FC = () => {
     setIsTemporaryChatOpen(!isTemporaryChatOpen);
   }, [isTemporaryChatOpen]);
 
-  const scrollDown = useCallback(() => {
+  const isNearBottom = useCallback(() => {
     if (containerRef.current) {
-      containerRef.current.scrollTo({
-        top: containerRef.current.scrollHeight,
-        behavior: 'smooth',
-      });
+      const { scrollTop, scrollHeight, clientHeight } = containerRef.current;
+      return scrollHeight - scrollTop - clientHeight < 300;
     }
+    return false;
   }, [containerRef]);
 
+  const scrollDown = useCallback(
+    (onlyWhenNearBottom: boolean = false) => {
+      if (containerRef.current && (!onlyWhenNearBottom || isNearBottom())) {
+        containerRef.current.scrollTo({
+          top: containerRef.current.scrollHeight,
+          behavior: 'smooth',
+        });
+      }
+    },
+    [containerRef, isNearBottom],
+  );
+
   useEffect(() => {
-    if (isTemporaryChatOpen && containerRef.current) scrollDown();
+    // this effect is fired when starting or finishing the generation
+    // loading -> not loading means the generation is finished
+    if (!(isLoading || temporaryIsLoading)) {
+      scrollDown(true);
+      setIsAutoScrollMode(false);
+      // not loading -> loading means the generation is starting
+      // we set the auto scroll mode while the generation is running
+    } else {
+      setIsAutoScrollMode(true);
+    }
+  }, [isLoading, temporaryIsLoading]);
+
+  useEffect(() => {
+    const intervalId = setInterval(() => {
+      if (isAutoScrollMode) scrollDown(true);
+    }, 1000);
+
+    return () => {
+      clearInterval(intervalId);
+    };
+  }, [isAutoScrollMode]);
+
+  useEffect(() => {
+    if (isTemporaryChatOpen && containerRef.current) scrollDown(true);
   }, [isTemporaryChatOpen]);
 
   useEffect(() => {

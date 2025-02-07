@@ -18,6 +18,9 @@ export interface UsageBarChartProps {
   data: MonthlyUsage[];
 }
 
+/**
+ * Since the cost is in the unit of 1/1000000, we need to divide it by 1000000 to get the actual cost.
+ */
 const formatData = (data: MonthlyUsage[]): MonthlyUsage[] => {
   return data.map((d) => {
     return {
