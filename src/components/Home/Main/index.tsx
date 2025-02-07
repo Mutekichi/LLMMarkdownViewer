@@ -14,7 +14,7 @@ import {
   Text,
   VStack,
 } from '@chakra-ui/react';
-import { FC, useEffect, useRef, useState } from 'react';
+import { FC, useCallback, useEffect, useRef, useState } from 'react';
 import { RxTrash } from 'react-icons/rx';
 import {
   OPENAI_MODEL_DISPLAY_NAMES,
@@ -65,16 +65,37 @@ const Main: FC = () => {
   } = useOpenai();
   const [isModelSelectPopoverOpen, setIsModelSelectPopoverOpen] =
     useState(false);
-  const [isChecked, setIsChecked] = useState(false);
+  const [isTemporaryChatOpen, setIsTemporaryChatOpen] = useState(false);
   const [isAnalyticsOpen, setIsAnalyticsOpen] = useState(false);
   const [model, setModel] = useState<OpenaiModelType>(OpenaiModelType.o1mini);
+  const containerRef = useRef<HTMLDivElement>(null);
 
-  const onTemporaryChatButtonClick = () => {
-    if (isChecked) {
+  // const onTemporaryChatButtonClick = () => {
+  //   if (isTemporaryChatOpen) {
+  //     temporaryResetHistory();
+  //   }
+  //   setIsTemporaryChatOpen(!isTemporaryChatOpen);
+  // };
+
+  const onTemporaryChatButtonClick = useCallback(() => {
+    if (isTemporaryChatOpen) {
       temporaryResetHistory();
     }
-    setIsChecked(!isChecked);
-  };
+    setIsTemporaryChatOpen(!isTemporaryChatOpen);
+  }, [isTemporaryChatOpen]);
+
+  const scrollDown = useCallback(() => {
+    if (containerRef.current) {
+      containerRef.current.scrollTo({
+        top: containerRef.current.scrollHeight,
+        behavior: 'smooth',
+      });
+    }
+  }, [containerRef]);
+
+  useEffect(() => {
+    if (isTemporaryChatOpen && containerRef.current) scrollDown();
+  }, [isTemporaryChatOpen]);
 
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
@@ -116,14 +137,21 @@ const Main: FC = () => {
         <AppHeader />
         <AnalyticsDialog />
       </DialogRoot>
-      <VStack flex="1" overflowY="auto" w="100%" pb={4} minH="20vh">
+      <VStack
+        flex="1"
+        overflowY="auto"
+        w="100%"
+        pb={4}
+        minH="20vh"
+        ref={containerRef}
+      >
         <MessageHistory
           messages={excludeSystemMessages(messageDetails)}
           // chatMessages={chatMessages}
           streaming={isLoading}
           streamingMessage={output}
         />
-        {isChecked && (
+        {isTemporaryChatOpen && (
           <VStack
             w="80%"
             gap={2}
@@ -157,7 +185,7 @@ const Main: FC = () => {
             textareaRef={textareaRef}
             onChange={(value) => setInputText(value)}
             onButtonClick={(value) => {
-              if (isChecked) {
+              if (isTemporaryChatOpen) {
                 temporaryTemporaryStreamResponse(value, model);
                 // temporarySetStopGeneration(false);
               } else {
@@ -202,7 +230,7 @@ const Main: FC = () => {
                 display="flex"
                 alignItems="flex-start"
                 h="100%"
-                opacity={isChecked ? 1 : 0.5}
+                opacity={isTemporaryChatOpen ? 1 : 0.5}
               >
                 {/* <img src="/icons/vanish.svg" alt="SVG" width={40} height={40} /> */}
                 <img
@@ -213,7 +241,7 @@ const Main: FC = () => {
                 />
               </Box>
               <Flex justify="flex-end">
-                <Switch size="lg" checked={isChecked} />
+                <Switch size="lg" checked={isTemporaryChatOpen} />
               </Flex>
             </HStack>
           </Tooltip>
@@ -234,9 +262,9 @@ const Main: FC = () => {
               _hover={{ bgColor: 'blackAlpha.50' }}
               onClick={() => {
                 resetHistory();
-                if (isChecked) {
+                if (isTemporaryChatOpen) {
                   temporaryResetHistory();
-                  setIsChecked(false);
+                  setIsTemporaryChatOpen(false);
                 }
               }}
             >
