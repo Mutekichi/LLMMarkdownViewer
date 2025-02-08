@@ -1,8 +1,9 @@
+import { HighlightableReactMarkdown } from '@/components/MarkdownViewer/HighlightableReactMarkdown';
 import { ChevronDownIcon, ChevronUpIcon } from '@chakra-ui/icons';
 import { Box, Button, Icon } from '@chakra-ui/react';
 import { motion } from 'framer-motion';
 import { FC, useState } from 'react';
-import { MarkdownViewer } from '../../MarkdownViewer';
+import { HighlightInfo } from '../../MarkdownViewer/HighlightableReactMarkdown/HighlightableElement';
 
 interface MessageProps {
   message: string;
@@ -18,6 +19,9 @@ export const Message: FC<MessageProps> = ({
   borderColor,
 }) => {
   const [isCollapsed, setIsCollapsed] = useState(false);
+  const [highlightedPartInfo, setHighlightedPartInfo] = useState<
+    HighlightInfo[]
+  >([]);
 
   return (
     <Box
@@ -57,7 +61,12 @@ export const Message: FC<MessageProps> = ({
         transition={{ duration: 0.3 }}
         overflow="hidden"
       >
-        <MarkdownViewer markdown={message} />
+        {/* <MarkdownViewer markdown={message} /> */}
+        <HighlightableReactMarkdown
+          markdown={message}
+          highlightedPartInfo={highlightedPartInfo}
+          setHighlightedPartInfo={setHighlightedPartInfo}
+        />
       </MotionBox>
     </Box>
   );
