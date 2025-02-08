@@ -1,15 +1,16 @@
 'use client';
 import { DialogRoot } from '@/components/ui/dialog';
 import { useOpenai } from '@/hooks/useOpenai';
-import { checkInputLength } from '@/utils/chatUtils';
-import { Center, VStack } from '@chakra-ui/react';
+import { checkInputLength, excludeSystemMessages } from '@/utils/chatUtils';
+import { Center, Text, VStack } from '@chakra-ui/react';
 import { FC, useCallback, useEffect, useRef, useState } from 'react';
 import { OpenaiModelType } from '../../../config/llm-models';
 import CustomTextInput from '../../CustomInput';
 import { AppHeader } from '../AppHeader';
 
 import { AnalyticsDialog } from '../AnalyticsDialog';
-import { MessageHistoryPart } from './MessageHistoryPart';
+// MessageHistory を直接利用するための import
+import { MessageHistory } from '../MessageHistory';
 import { MessageSettingPart } from './MessageSettingPart';
 
 const Main: FC = () => {
@@ -85,11 +86,10 @@ const Main: FC = () => {
       scrollDown(true);
       setIsAutoScrollMode(false);
       // not loading -> loading means the generation is starting
-      // we set the auto scroll mode while the generation is running
     } else {
       setIsAutoScrollMode(true);
     }
-  }, [isLoading, temporaryIsLoading]);
+  }, [isLoading, temporaryIsLoading, scrollDown]);
 
   useEffect(() => {
     const intervalId = setInterval(() => {
@@ -99,19 +99,17 @@ const Main: FC = () => {
     return () => {
       clearInterval(intervalId);
     };
-  }, [isAutoScrollMode]);
+  }, [isAutoScrollMode, scrollDown]);
 
   useEffect(() => {
     if (isTemporaryChatOpen && containerRef.current) scrollDown(false);
-  }, [isTemporaryChatOpen]);
+  }, [isTemporaryChatOpen, scrollDown]);
 
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
-      if (e.key == 'Enter' && document.activeElement !== textareaRef.current) {
+      if (e.key === 'Enter' && document.activeElement !== textareaRef.current) {
         // focus on textarea if the user presses Enter key and the textarea is not focused
         textareaRef.current?.focus();
-        // prevent default behavior if the textarea is focused
-        // otherwise, the Enter will trigger the new line in the textarea
         e.preventDefault();
       }
     };
@@ -120,6 +118,17 @@ const Main: FC = () => {
     return () => {
       window.removeEventListener('keydown', handleKeyDown);
     };
+  }, []);
+
+  const handleMouseUp = useCallback(() => {
+    const selection = window.getSelection();
+    if (selection && selection.toString()) {
+      setSelectedText(selection.toString());
+    }
+  }, []);
+
+  const handleMouseLeave = useCallback(() => {
+    setSelectedText('');
   }, []);
 
   return (
@@ -145,21 +154,54 @@ const Main: FC = () => {
         <AppHeader />
         <AnalyticsDialog />
       </DialogRoot>
-      <MessageHistoryPart
-        isTemporaryChatOpen={isTemporaryChatOpen}
-        temporaryMessageDetails={temporaryMessageDetails}
-        temporaryIsLoading={temporaryIsLoading}
-        temporaryOutput={temporaryOutput}
-        chatMessages={chatMessages}
-        messageDetails={messageDetails}
-        isLoading={isLoading}
-        output={output}
-        openTemporaryChat={onTemporaryChatButtonClick}
-        closeTemporaryChat={onTemporaryChatButtonClick}
-        containerRef={containerRef}
-        selectedText={selectedText}
-        setSelectedText={setSelectedText}
-      />
+
+      <VStack
+        flex="1"
+        overflowY="auto"
+        w="100%"
+        pb={4}
+        minH="20vh"
+        ref={containerRef}
+        onMouseUp={handleMouseUp}
+        onMouseLeave={handleMouseLeave}
+      >
+        <MessageHistory
+          messages={excludeSystemMessages(messageDetails)}
+          streaming={isLoading}
+          streamingMessage={output}
+        />
+        {isTemporaryChatOpen && (
+          <VStack
+            w="80%"
+            gap={2}
+            justify="space-between"
+            bgColor="#eeeeee"
+            flex="1"
+            borderTopRadius={20}
+            border="1"
+            justifyContent="start"
+          >
+            <VStack p={2} gap={0}>
+              <Text fontSize="1.5rem" textAlign="center">
+                Temporary Chat
+              </Text>
+              <Text fontSize="1.2rem" textAlign="center">
+                This conversation does not include any previous chat history and
+                will not be saved.
+              </Text>
+              <Text fontSize="1.2rem" textAlign="center">
+                {selectedText}
+              </Text>
+            </VStack>
+            <MessageHistory
+              messages={excludeSystemMessages(temporaryMessageDetails)}
+              streaming={temporaryIsLoading}
+              streamingMessage={temporaryOutput}
+            />
+          </VStack>
+        )}
+      </VStack>
+
       <VStack w="100%" gap={2} pt={4} justify="space-between" bgColor="#f5f5f5">
         <Center w="80%">
           <CustomTextInput
@@ -168,12 +210,12 @@ const Main: FC = () => {
             onButtonClick={(value) => {
               if (isTemporaryChatOpen) {
                 temporaryTemporaryStreamResponse(value, model);
-                // temporarySetStopGeneration(false);
+                setInputText('');
               } else {
                 streamResponse(value, model);
                 setStopGeneration(false);
+                setInputText('');
               }
-              setInputText('');
             }}
             buttonDisabled={!checkInputLength(inputText)}
             inputDisabled={isLoading}
