@@ -9,7 +9,7 @@ import CustomTextInput from '../../CustomInput';
 import { AppHeader } from '../AppHeader';
 
 import { AnalyticsDialog } from '../AnalyticsDialog';
-import { MessageHistoryPart } from './MessagePart';
+import { MessageHistoryPart } from './MessageHistoryPart';
 import { MessageSettingPart } from './MessageSettingPart';
 
 const Main: FC = () => {
