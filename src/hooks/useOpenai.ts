@@ -72,7 +72,7 @@ export const useOpenai = (): UseOpenaiReturn => {
   **太字テキスト**
   *イタリック*
   ~~打ち消し線~~
-  \`インラインコード\`
+  \`inline_code.py\`
   
   ## リンク
   [Google](https://www.google.com)
