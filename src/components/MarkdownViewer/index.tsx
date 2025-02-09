@@ -37,9 +37,8 @@ const CustomP = ({ children, ...props }: any) => {
       console.log('range', range);
       console.log(range.startOffset, range.endOffset);
       const rect = range.getBoundingClientRect();
-      // rect を元に、選択範囲の中央付近の位置を計算
       const toggleX = rect.left + rect.width / 2;
-      const toggleY = rect.top; // 必要に応じて調整
+      const toggleY = rect.top;
       console.log('toggleX', toggleX);
       console.log('toggleY', toggleY);
     }

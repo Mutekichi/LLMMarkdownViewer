@@ -2,7 +2,7 @@
   "name": "llm-markdown-viewer",
   "version": "1.0.0",
   "description": "A markdown viewer for the LLM project",
-  "main": "index.js",
+  "main": "index.tsx",
   "license": "MIT",
   "dependencies": {
     "@anthropic-ai/sdk": "^0.36.3",

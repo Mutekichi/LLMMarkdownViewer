@@ -2,16 +2,45 @@
 import { DialogRoot } from '@/components/ui/dialog';
 import { useOpenai } from '@/hooks/useOpenai';
 import { checkInputLength, excludeSystemMessages } from '@/utils/chatUtils';
-import { Center, Text, VStack } from '@chakra-ui/react';
+import { Box, Button, Center, Input, Text, VStack } from '@chakra-ui/react';
 import { FC, useCallback, useEffect, useRef, useState } from 'react';
 import { OpenaiModelType } from '../../../config/llm-models';
 import CustomTextInput from '../../CustomInput';
 import { AppHeader } from '../AppHeader';
 
+import {
+  HighlightInfo,
+  HighlightRange,
+} from '@/components/MarkdownViewer/HighlightableReactMarkdown/HighlightableElement';
+import {
+  DrawerBody,
+  DrawerContent,
+  DrawerFooter,
+  DrawerHeader,
+  DrawerRoot,
+} from '@/components/ui/drawer';
 import { AnalyticsDialog } from '../AnalyticsDialog';
-// MessageHistory を直接利用するための import
 import { MessageHistory } from '../MessageHistory';
 import { MessageSettingPart } from './MessageSettingPart';
+
+interface HighlightedPartInfo {
+  [messageId: string]: HighlightInfo[];
+}
+
+interface Memos {
+  [messageId: string]: {
+    id: string;
+    range: HighlightRange;
+    memo: string;
+  }[];
+}
+
+interface CurrentSelection {
+  msgId: string;
+  id: string;
+  startOffset: number;
+  endOffset: number;
+}
 
 const Main: FC = () => {
   const {
@@ -37,13 +66,11 @@ const Main: FC = () => {
     messageDetails: temporaryMessageDetails,
     resetHistory: temporaryResetHistory,
     temporaryStreamResponse: temporaryTemporaryStreamResponse,
-    // } = useMockOpenai();
   } = useOpenai();
   const containerRef = useRef<HTMLDivElement>(null);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
 
-  const [inputText, setInputText] = useState('');
-  const [selectedText, setSelectedText] = useState('');
+  const [inputPrompt, setInputPrompt] = useState('');
   const [model, setModel] = useState<OpenaiModelType>(OpenaiModelType.o1mini);
 
   const [isModelSelectPopoverOpen, setIsModelSelectPopoverOpen] =
@@ -52,12 +79,202 @@ const Main: FC = () => {
   const [isAnalyticsOpen, setIsAnalyticsOpen] = useState(false);
   const [isAutoScrollMode, setIsAutoScrollMode] = useState(false);
 
-  const onTemporaryChatButtonClick = useCallback(() => {
-    if (isTemporaryChatOpen) {
-      temporaryResetHistory();
+  const [highlightedPartInfo, setHighlightedPartInfo] =
+    useState<HighlightedPartInfo>({});
+  const [memos, setMemos] = useState<Memos>({});
+
+  const [currentSelection, setCurrentSelection] =
+    useState<CurrentSelection | null>(null);
+  const [actionType, setActionType] = useState<'memo' | 'explain' | null>(null);
+  const [drawerOpen, setDrawerOpen] = useState(false);
+  const [inputText, setInputText] = useState('');
+
+  const renderPopover = useCallback(
+    (
+      msgId: string,
+      info: {
+        id: string;
+        absoluteStart: number;
+        absoluteEnd: number;
+        anchorRect: DOMRect;
+      },
+      close: () => void,
+    ) => {
+      return (
+        <Box p={2}>
+          <Button
+            colorScheme="blue"
+            onClick={() => {
+              setCurrentSelection({
+                msgId,
+                id: info.id,
+                startOffset: info.absoluteStart,
+                endOffset: info.absoluteEnd,
+              });
+              setActionType('memo');
+              setDrawerOpen(true);
+              close();
+            }}
+            mb={2}
+          >
+            Add memo
+          </Button>
+          <Button
+            colorScheme="blue"
+            onClick={() => {
+              setCurrentSelection({
+                msgId,
+                id: info.id,
+                startOffset: info.absoluteStart,
+                endOffset: info.absoluteEnd,
+              });
+              setActionType('explain');
+              console.log('Explain in more detail for element', info.id);
+              close();
+            }}
+            mb={2}
+          >
+            Explain in more detail
+          </Button>
+          <Button variant="ghost" onClick={close}>
+            Cancel
+          </Button>
+        </Box>
+      );
+    },
+    [],
+  );
+
+  const onHighlightedClick = useCallback(
+    (msgId: string, info: { id: string; range: HighlightRange }) => {
+      const memoEntry = memos[msgId]?.find(
+        (m) =>
+          m.id === info.id &&
+          m.range.startOffset === info.range.startOffset &&
+          m.range.endOffset === info.range.endOffset,
+      );
+      setCurrentSelection({
+        msgId,
+        id: info.id,
+        startOffset: info.range.startOffset,
+        endOffset: info.range.endOffset,
+      });
+      setActionType('memo');
+      setInputText(memoEntry ? memoEntry.memo : '');
+      setDrawerOpen(true);
+    },
+    [memos],
+  );
+
+  const handleDrawerDelete = useCallback(() => {
+    if (currentSelection) {
+      const { msgId, id, startOffset, endOffset } = currentSelection;
+
+      setHighlightedPartInfo((prev) => {
+        const currentHighlights = prev[msgId] || [];
+        // save ranges that are not the same as the current selection
+        const newHighlights = currentHighlights
+          .map((item) => {
+            if (item.id === id) {
+              return {
+                id: item.id,
+                ranges: item.ranges.filter(
+                  (r) =>
+                    !(
+                      r.startOffset === startOffset && r.endOffset === endOffset
+                    ),
+                ),
+              };
+            }
+            return item;
+          })
+          .filter((item) => item.ranges.length > 0);
+        return { ...prev, [msgId]: newHighlights };
+      });
+
+      setMemos((prev) => {
+        const currentMemos = prev[msgId] || [];
+        const newMemos = currentMemos.filter(
+          (m) =>
+            !(
+              m.id === id &&
+              m.range.startOffset === startOffset &&
+              m.range.endOffset === endOffset
+            ),
+        );
+        return { ...prev, [msgId]: newMemos };
+      });
     }
-    setIsTemporaryChatOpen(!isTemporaryChatOpen);
-  }, [isTemporaryChatOpen]);
+    setDrawerOpen(false);
+    setCurrentSelection(null);
+    setActionType(null);
+    setInputText('');
+  }, [currentSelection, setHighlightedPartInfo, setMemos, setDrawerOpen]);
+
+  const handleDrawerSave = useCallback(() => {
+    if (currentSelection && actionType === 'memo') {
+      const { msgId, id, startOffset, endOffset } = currentSelection;
+      setHighlightedPartInfo((prev) => {
+        const currentHighlights = prev[msgId] || [];
+        const existingIndex = currentHighlights.findIndex(
+          (item) => item.id === id,
+        );
+        const newRange: HighlightRange = { startOffset, endOffset };
+        if (existingIndex >= 0) {
+          const existing = currentHighlights[existingIndex];
+          const alreadyExists = existing.ranges.some(
+            (r) =>
+              r.startOffset === newRange.startOffset &&
+              r.endOffset === newRange.endOffset,
+          );
+          if (!alreadyExists) {
+            const updated = {
+              ...existing,
+              ranges: [...existing.ranges, newRange],
+            };
+            const newHighlights = [...currentHighlights];
+            newHighlights[existingIndex] = updated;
+            return { ...prev, [msgId]: newHighlights };
+          }
+          return prev;
+        } else {
+          return {
+            ...prev,
+            [msgId]: [...currentHighlights, { id, ranges: [newRange] }],
+          };
+        }
+      });
+      setMemos((prev) => {
+        const currentMemos = prev[msgId] || [];
+        const idx = currentMemos.findIndex(
+          (m) =>
+            m.id === id &&
+            m.range.startOffset === startOffset &&
+            m.range.endOffset === endOffset,
+        );
+        if (idx >= 0) {
+          const updated = { ...currentMemos[idx], memo: inputText };
+          const newMemos = [...currentMemos];
+          newMemos[idx] = updated;
+          return { ...prev, [msgId]: newMemos };
+        } else {
+          return {
+            ...prev,
+            [msgId]: [
+              ...currentMemos,
+              { id, range: { startOffset, endOffset }, memo: inputText },
+            ],
+          };
+        }
+      });
+    } else if (currentSelection && actionType === 'explain') {
+      console.log('Explain in more detail for', currentSelection);
+    }
+    setDrawerOpen(false);
+    setCurrentSelection(null);
+    setActionType(null);
+    setInputText('');
+  }, [currentSelection, actionType, inputText]);
 
   const isNearBottom = useCallback(() => {
     if (containerRef.current) {
@@ -120,17 +337,6 @@ const Main: FC = () => {
     };
   }, []);
 
-  const handleMouseUp = useCallback(() => {
-    const selection = window.getSelection();
-    if (selection && selection.toString()) {
-      setSelectedText(selection.toString());
-    }
-  }, []);
-
-  const handleMouseLeave = useCallback(() => {
-    setSelectedText('');
-  }, []);
-
   return (
     <VStack
       w="100%"
@@ -162,13 +368,14 @@ const Main: FC = () => {
         pb={4}
         minH="20vh"
         ref={containerRef}
-        onMouseUp={handleMouseUp}
-        onMouseLeave={handleMouseLeave}
       >
         <MessageHistory
           messages={excludeSystemMessages(messageDetails)}
           streaming={isLoading}
           streamingMessage={output}
+          highlightedPartInfo={highlightedPartInfo}
+          onHighlightedClick={onHighlightedClick}
+          renderPopover={renderPopover}
         />
         {isTemporaryChatOpen && (
           <VStack
@@ -189,14 +396,14 @@ const Main: FC = () => {
                 This conversation does not include any previous chat history and
                 will not be saved.
               </Text>
-              <Text fontSize="1.2rem" textAlign="center">
-                {selectedText}
-              </Text>
             </VStack>
             <MessageHistory
               messages={excludeSystemMessages(temporaryMessageDetails)}
               streaming={temporaryIsLoading}
               streamingMessage={temporaryOutput}
+              highlightedPartInfo={highlightedPartInfo}
+              onHighlightedClick={onHighlightedClick}
+              renderPopover={renderPopover}
             />
           </VStack>
         )}
@@ -206,18 +413,18 @@ const Main: FC = () => {
         <Center w="80%">
           <CustomTextInput
             textareaRef={textareaRef}
-            onChange={(value) => setInputText(value)}
+            onChange={(value) => setInputPrompt(value)}
             onButtonClick={(value) => {
               if (isTemporaryChatOpen) {
                 temporaryTemporaryStreamResponse(value, model);
-                setInputText('');
+                setInputPrompt('');
               } else {
                 streamResponse(value, model);
                 setStopGeneration(false);
-                setInputText('');
+                setInputPrompt('');
               }
             }}
-            buttonDisabled={!checkInputLength(inputText)}
+            buttonDisabled={!checkInputLength(inputPrompt)}
             inputDisabled={isLoading}
           />
         </Center>
@@ -233,6 +440,39 @@ const Main: FC = () => {
           temporaryResetHistory={temporaryResetHistory}
         />
       </VStack>
+      <DrawerRoot open={drawerOpen} onOpenChange={(e) => setDrawerOpen(e.open)}>
+        <DrawerContent>
+          <DrawerHeader>
+            {actionType === 'memo' ? 'Memo' : 'Explain in More Detail'}
+          </DrawerHeader>
+          <DrawerBody>
+            <Input
+              placeholder={
+                actionType === 'memo' ? 'Enter memo...' : 'Enter explanation...'
+              }
+              value={inputText}
+              onChange={(e) => setInputText(e.target.value)}
+            />
+          </DrawerBody>
+          <DrawerFooter>
+            <Button
+              variant="outline"
+              mr={3}
+              onClick={() => setDrawerOpen(false)}
+            >
+              Cancel
+            </Button>
+            {currentSelection && (
+              <Button colorScheme="red" mr={3} onClick={handleDrawerDelete}>
+                Delete
+              </Button>
+            )}
+            <Button colorScheme="blue" onClick={handleDrawerSave}>
+              Save
+            </Button>
+          </DrawerFooter>
+        </DrawerContent>
+      </DrawerRoot>
     </VStack>
   );
 };

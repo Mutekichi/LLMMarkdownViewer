@@ -103,7 +103,7 @@ export const HighlightableElement: React.FC<HighlightableElementProps> = ({
 }) => {
   const originalText = typeof children === 'string' ? children : '';
 
-  // 分割：highlightInfo に基づいて元テキストをセグメントに分割する
+  // Split the text content into segments based on the highlight ranges.
   let segments: SegmentInfo[] = [];
   if (typeof originalText === 'string') {
     const ranges = highlightInfo
@@ -137,26 +137,22 @@ export const HighlightableElement: React.FC<HighlightableElementProps> = ({
     }
   }
 
-  // ポップオーバー表示用状態
   const [popoverInfo, setPopoverInfo] = React.useState<PopoverInfo | null>(
     null,
   );
   const closePopover = () => setPopoverInfo(null);
 
-  /**
-   * handleMouseUp:
-   * 1. Selection API で選択範囲を取得
-   * 2. 単一テキストノード内の選択の場合、親の data-offset-start 属性から絶対オフセットを計算する
-   * 3. 既にハイライト済みなら onHighlightedClick を呼び、そうでなければ renderPopover（または onSelection）を呼ぶ
-   */
   const handleMouseUp = (e: React.MouseEvent<HTMLElement>) => {
+    // get the current selection range
     const selection = window.getSelection();
     if (!selection || selection.isCollapsed) return;
     const range = selection.getRangeAt(0);
+    // selection works only within the same node
     if (range.startContainer !== range.endContainer) {
       console.log('Selection spans multiple nodes. Ignoring.');
       return;
     }
+
     if (range.startContainer.nodeType !== Node.TEXT_NODE) return;
     let spanElement = range.startContainer.parentElement;
     while (spanElement && !spanElement.hasAttribute('data-offset-start')) {
@@ -166,10 +162,12 @@ export const HighlightableElement: React.FC<HighlightableElementProps> = ({
     const dataOffsetStart = spanElement.getAttribute('data-offset-start');
     if (!dataOffsetStart) return;
     const segmentStart = parseInt(dataOffsetStart, 10);
+    // calculate the start and end offsets calculated from the whole text
     const absoluteStart = segmentStart + range.startOffset;
     const absoluteEnd = segmentStart + range.endOffset;
     if (spanElement.getAttribute('data-highlighted') === 'true') {
       if (onHighlightedClick) {
+        console.log('onHighlightedClick');
         onHighlightedClick({
           id,
           range: { startOffset: absoluteStart, endOffset: absoluteEnd },
@@ -180,7 +178,6 @@ export const HighlightableElement: React.FC<HighlightableElementProps> = ({
     }
     if (renderPopover) {
       const rect = range.getBoundingClientRect();
-      // 対象要素の id も含めた情報を渡す
       setPopoverInfo({ absoluteStart, absoluteEnd, anchorRect: rect });
     } else if (onSelection) {
       onSelection({ id, startOffset: absoluteStart, endOffset: absoluteEnd });
@@ -188,7 +185,6 @@ export const HighlightableElement: React.FC<HighlightableElementProps> = ({
     selection.removeAllRanges();
   };
 
-  // セグメント描画：ハイライト済みはボタン風に、それ以外は通常の <span> として描画
   const renderSegment = (seg: SegmentInfo, idx: number) => {
     if (seg.highlighted) {
       return (
@@ -197,6 +193,8 @@ export const HighlightableElement: React.FC<HighlightableElementProps> = ({
           key={idx}
           onClick={() => {
             if (onHighlightedClick) {
+              console.log('highlighted segment clicked');
+              console.log(seg.start, seg.end);
               onHighlightedClick({
                 id,
                 range: { startOffset: seg.start, endOffset: seg.end },
@@ -207,28 +205,21 @@ export const HighlightableElement: React.FC<HighlightableElementProps> = ({
           data-offset-end={seg.end}
           data-highlighted="true"
           color="red.500"
-          //   sx={{
-          //     border: '1px solid',
-          //     borderColor: 'blue.300',
-          //     borderRadius: '4px',
-          //     padding: '2px 4px',
-          //     cursor: 'pointer',
-          //     marginRight: '2px',
-          //   }}
         >
           {seg.text}
         </Box>
       );
     } else {
       return (
-        <span
+        <Box
+          as="span"
           key={idx}
           data-offset-start={seg.start}
           data-offset-end={seg.end}
           data-highlighted="false"
         >
           {seg.text}
-        </span>
+        </Box>
       );
     }
   };
@@ -256,9 +247,6 @@ export const HighlightableElement: React.FC<HighlightableElementProps> = ({
               <Box position="absolute" width="1px" height="1px" />
             </PopoverTrigger>
             <PopoverContent>
-              {/**
-               * renderPopover を呼び出す際、対象要素の id を含めた情報を渡す
-               */}
               {renderPopover({ id, ...popoverInfo }, closePopover)}
             </PopoverContent>
           </PopoverRoot>

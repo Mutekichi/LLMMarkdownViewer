@@ -1,4 +1,3 @@
-// HighlightableReactMarkdown.tsx
 'use client';
 import { Box, Link, List } from '@chakra-ui/react';
 import React from 'react';
@@ -10,15 +9,18 @@ import {
   HighlightRange,
 } from './HighlightableElement';
 
+/**
+ * HighlightableReactMarkdownProps
+ * - markdown: The markdown content to render.
+ * - highlightedPartInfo: An array of HighlightInfo objects for the markdown content.
+ * - onSelection: Callback that fires when the user selects an unhighlighted range.
+ * - renderPopover: A function for rendering a popover when an unhighlighted segment is selected.
+ *  It receives selection info (including the target id) and a close function.
+ * - onHighlightedClick: Callback that fires when a highlighted segment is clicked.
+ */
 interface HighlightableReactMarkdownProps {
   markdown: string;
   highlightedPartInfo: HighlightInfo[];
-  setHighlightedPartInfo: React.Dispatch<React.SetStateAction<HighlightInfo[]>>;
-  /**
-   * onSelection: (任意) 未ハイライト部分の選択時のコールバック
-   * renderPopover: HighlightableElement 内で呼ばれるカスタムポップオーバーのレンダラ
-   * onHighlightedClick: ハイライト済み部分がクリックされたときのコールバック
-   */
   onSelection?: (info: {
     id: string;
     startOffset: number;
@@ -36,33 +38,11 @@ interface HighlightableReactMarkdownProps {
   onHighlightedClick?: (info: { id: string; range: HighlightRange }) => void;
 }
 
-const mergeRanges = (ranges: HighlightRange[]): HighlightRange[] => {
-  if (ranges.length === 0) return [];
-  const sorted = [...ranges].sort((a, b) => a.startOffset - b.startOffset);
-  const merged: HighlightRange[] = [];
-  let current = sorted[0];
-  for (let i = 1; i < sorted.length; i++) {
-    const r = sorted[i];
-    if (r.startOffset <= current.endOffset) {
-      current = {
-        startOffset: current.startOffset,
-        endOffset: Math.max(current.endOffset, r.endOffset),
-      };
-    } else {
-      merged.push(current);
-      current = r;
-    }
-  }
-  merged.push(current);
-  return merged;
-};
-
 export const HighlightableReactMarkdown: React.FC<
   HighlightableReactMarkdownProps
 > = ({
   markdown,
   highlightedPartInfo,
-  setHighlightedPartInfo,
   onSelection,
   renderPopover,
   onHighlightedClick,
