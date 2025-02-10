@@ -1,17 +1,9 @@
 'use client';
-import { DialogRoot } from '@/components/ui/dialog';
-import { MessageDetail, useOpenai } from '@/hooks/useOpenai';
-import { checkInputLength, excludeSystemMessages } from '@/utils/chatUtils';
-import { Box, Button, Center, Input, Text, VStack } from '@chakra-ui/react';
-import { FC, useCallback, useEffect, useRef, useState } from 'react';
-import { OpenaiModelType } from '../../../config/llm-models';
-import CustomTextInput from '../../CustomInput';
-import { AppHeader } from '../AppHeader';
-
 import {
   HighlightInfo,
   HighlightRange,
 } from '@/components/MarkdownViewer/HighlightableReactMarkdown/HighlightableElement';
+import { DialogRoot } from '@/components/ui/dialog';
 import {
   DrawerBody,
   DrawerContent,
@@ -19,8 +11,27 @@ import {
   DrawerHeader,
   DrawerRoot,
 } from '@/components/ui/drawer';
+import { Tooltip } from '@/components/ui/tooltip';
 import { useContainerRef } from '@/contexts/ContainerRefContext';
+import { MessageDetail, useOpenai } from '@/hooks/useOpenai';
+import { checkInputLength, excludeSystemMessages } from '@/utils/chatUtils';
+import {
+  Box,
+  Button,
+  Center,
+  HStack,
+  Icon,
+  Input,
+  Text,
+  VStack,
+} from '@chakra-ui/react';
+import { FC, useCallback, useEffect, useRef, useState } from 'react';
+import { HiMagnifyingGlass } from 'react-icons/hi2';
+import { LuPencilLine } from 'react-icons/lu';
+import { OpenaiModelType } from '../../../config/llm-models';
+import CustomTextInput from '../../CustomInput';
 import { AnalyticsDialog } from '../AnalyticsDialog';
+import { AppHeader } from '../AppHeader';
 import { MessageHistory } from '../MessageHistory';
 import { MessageSettingPart } from './MessageSettingPart';
 
@@ -132,55 +143,80 @@ const Main: FC = () => {
       close: () => void,
     ) => {
       return (
-        <Box p={2}>
-          <Button
-            colorScheme="blue"
-            onClick={() => {
-              setCurrentSelection({
-                msgId,
-                id: info.id,
-                startOffset: info.absoluteStart,
-                endOffset: info.absoluteEnd,
-              });
-              setActionType('memo');
-              setDrawerOpen(true);
-              close();
-            }}
-            mb={2}
+        <HStack p={2} w="auto">
+          <Tooltip
+            content="Add memo"
+            positioning={{ placement: 'bottom' }}
+            openDelay={100}
+            closeDelay={100}
           >
-            Add memo
-          </Button>
-          <Button
-            colorScheme="blue"
-            onClick={() => {
-              setCurrentSelection({
-                msgId,
-                id: info.id,
-                startOffset: info.absoluteStart,
-                endOffset: info.absoluteEnd,
-              });
-              setActionType('explain');
-              setInputText(
-                info.text
-                  ? info.text.length > 20
-                    ? info.text.slice(0, 20) + '...'
-                    : info.text
-                  : '',
-              );
-              setDrawerOpen(true);
-              close();
-              explainSetChatMessages([...chatMessages]);
-              setTextToExplain(info.text || '');
-              setShouldStartExplanation(true);
-            }}
-            mb={2}
+            <Button
+              display="flex"
+              h="100%"
+              w="auto"
+              bgColor="transparent"
+              opacity={1}
+              px={2}
+              py={1}
+              borderRadius={10}
+              _hover={{ bgColor: 'blackAlpha.50' }}
+              onClick={() => {
+                setCurrentSelection({
+                  msgId,
+                  id: info.id,
+                  startOffset: info.absoluteStart,
+                  endOffset: info.absoluteEnd,
+                });
+                setActionType('memo');
+                setDrawerOpen(true);
+                close();
+              }}
+            >
+              <Icon as={LuPencilLine} boxSize={8} color="blackAlpha.800" />
+            </Button>
+          </Tooltip>
+          <Tooltip
+            content="More details"
+            positioning={{ placement: 'bottom' }}
+            openDelay={100}
+            closeDelay={100}
           >
-            Explain in more detail
-          </Button>
-          <Button variant="ghost" onClick={close}>
-            Cancel
-          </Button>
-        </Box>
+            <Button
+              display="flex"
+              h="100%"
+              w="auto"
+              bgColor="transparent"
+              opacity={1}
+              px={2}
+              py={1}
+              borderRadius={10}
+              _hover={{ bgColor: 'blackAlpha.50' }}
+              onClick={() => {
+                setCurrentSelection({
+                  msgId,
+                  id: info.id,
+                  startOffset: info.absoluteStart,
+                  endOffset: info.absoluteEnd,
+                });
+                setActionType('explain');
+                setInputText(
+                  info.text
+                    ? info.text.length > 20
+                      ? info.text.slice(0, 20) + '...'
+                      : info.text
+                    : '',
+                );
+                setDrawerOpen(true);
+                close();
+                explainSetChatMessages([...chatMessages]);
+                setTextToExplain(info.text || '');
+                setShouldStartExplanation(true);
+              }}
+            >
+              <Icon as={HiMagnifyingGlass} boxSize={8} color="blackAlpha.800" />
+            </Button>
+          </Tooltip>
+        </HStack>
       );
     },
     [chatMessages],
@@ -427,7 +463,7 @@ const Main: FC = () => {
     if (shouldStartExplanation) {
       explainStreamResponse(
         `${textToExplain}について、さらに説明してください。回答は、なるべく「${textToExplain}とは、」に続く形でお願いします。`,
-        model,
+        OpenaiModelType.GPT4omini,
       );
       setShouldStartExplanation(false);
     }
@@ -549,7 +585,7 @@ const Main: FC = () => {
                   onHighlightedClick: onHighlightedClick,
                   renderPopover: renderPopover,
                 }}
-              />{' '}
+              />
             </Box>
           </VStack>
         )}
@@ -589,10 +625,10 @@ const Main: FC = () => {
       <DrawerRoot
         open={drawerOpen}
         onOpenChange={(e) => setDrawerOpen(e.open)}
-        size="md"
+        size={actionType === 'memo' ? 'sm' : 'md'}
       >
         <DrawerContent>
-          <DrawerHeader>
+          <DrawerHeader fontSize="md">
             {actionType === 'memo' ? 'Memo' : 'More about ' + inputText}
           </DrawerHeader>
           <DrawerBody>
@@ -608,7 +644,11 @@ const Main: FC = () => {
               />
             )}
             {actionType === 'explain' && (
-              <VStack mt={2}>
+              <VStack>
+                <Text fontSize="sm" color="gray.500">
+                  This will be sent to 4o-mini to generate more detailed
+                  explanation.
+                </Text>
                 <MessageHistory
                   // exclude the system message and the prompt for "...について、もう少しだけ簡潔に説明してください。"
                   messages={explainMessageDetails.slice(2)}

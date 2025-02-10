@@ -326,11 +326,12 @@ export const HighlightableElement: React.FC<HighlightableElementProps> = ({
             open
             onOpenChange={closePopover}
             positioning={{ placement: 'bottom' }}
+            size="sm"
           >
             <PopoverTrigger>
               <Box position="absolute" width="1px" height="1px" />
             </PopoverTrigger>
-            <PopoverContent>
+            <PopoverContent asChild>
               {renderPopover({ id, ...popoverInfo }, closePopover)}
             </PopoverContent>
           </PopoverRoot>

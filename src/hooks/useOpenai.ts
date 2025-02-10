@@ -108,6 +108,12 @@ export const useOpenai = (): UseOpenaiReturn => {
               content: systemPrompt,
               timestamp: new Date(),
             },
+            {
+              id: getNextMessageId(),
+              role: 'assistant',
+              content: 'Hello! How can I help you today?',
+              timestamp: new Date(),
+            },
             //             {
             //               id: getNextMessageId(),
             //               role: 'user',
