@@ -1,3 +1,4 @@
+import { MarkdownViewer } from '@/components/MarkdownViewer';
 import { HighlightableReactMarkdown } from '@/components/MarkdownViewer/HighlightableReactMarkdown';
 import { ChevronDownIcon, ChevronUpIcon } from '@chakra-ui/icons';
 import { Box, Button, Icon } from '@chakra-ui/react';
@@ -14,20 +15,22 @@ interface MessageProps {
     startOffset: number;
     endOffset: number;
   }) => void;
-  renderPopover: (
-    info: {
+  highlight?: {
+    renderPopover: (
+      info: {
+        id: string;
+        absoluteStart: number;
+        absoluteEnd: number;
+        anchorRect: DOMRect;
+      },
+      close: () => void,
+    ) => React.ReactNode;
+    onHighlightedClick: (info: {
       id: string;
-      absoluteStart: number;
-      absoluteEnd: number;
-      anchorRect: DOMRect;
-    },
-    close: () => void,
-  ) => React.ReactNode;
-  onHighlightedClick: (info: {
-    id: string;
-    range: { startOffset: number; endOffset: number };
-  }) => void;
-  highlightedPartInfo: any[];
+      range: { startOffset: number; endOffset: number };
+    }) => void;
+    highlightedPartInfo: any[];
+  };
 }
 
 const MotionBox = motion(Box);
@@ -38,11 +41,11 @@ export const Message: FC<MessageProps> = ({
   borderColor,
   onSelection,
   hasBorder = true,
-  renderPopover,
-  onHighlightedClick,
-  highlightedPartInfo,
+  highlight,
 }) => {
   const [isCollapsed, setIsCollapsed] = useState(false);
+
+  console.log(highlight ? 'highlight' : 'no highlight');
 
   return (
     <Box
@@ -82,12 +85,18 @@ export const Message: FC<MessageProps> = ({
         transition={{ duration: 0.3 }}
         overflow="hidden"
       >
-        <HighlightableReactMarkdown
-          markdown={message}
-          highlightedPartInfo={highlightedPartInfo}
-          renderPopover={(info, close) => renderPopover(info, close)}
-          onHighlightedClick={(info) => onHighlightedClick(info)}
-        />
+        {highlight ? (
+          <HighlightableReactMarkdown
+            markdown={message}
+            highlightedPartInfo={highlight.highlightedPartInfo}
+            renderPopover={(info, close) =>
+              highlight.renderPopover(info, close)
+            }
+            onHighlightedClick={(info) => highlight.onHighlightedClick(info)}
+          />
+        ) : (
+          <MarkdownViewer markdown={message} />
+        )}
       </MotionBox>
     </Box>
   );

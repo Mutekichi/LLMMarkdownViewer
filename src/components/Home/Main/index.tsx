@@ -408,9 +408,11 @@ const Main: FC = () => {
             messages={excludeSystemMessages(messageDetails)}
             streaming={isLoading}
             streamingMessage={output}
-            highlightedPartInfo={highlightedPartInfo}
-            onHighlightedClick={onHighlightedClick}
-            renderPopover={renderPopover}
+            highlight={{
+              highlightedPartInfo: highlightedPartInfo,
+              onHighlightedClick: onHighlightedClick,
+              renderPopover: renderPopover,
+            }}
           />
         </Box>
         {isTemporaryChatOpen && (
@@ -438,9 +440,11 @@ const Main: FC = () => {
                 messages={excludeSystemMessages(temporaryMessageDetails)}
                 streaming={temporaryIsLoading}
                 streamingMessage={temporaryOutput}
-                highlightedPartInfo={highlightedPartInfo}
-                onHighlightedClick={onHighlightedClick}
-                renderPopover={renderPopover}
+                highlight={{
+                  highlightedPartInfo: highlightedPartInfo,
+                  onHighlightedClick: onHighlightedClick,
+                  renderPopover: renderPopover,
+                }}
               />{' '}
             </Box>
           </VStack>
@@ -505,9 +509,6 @@ const Main: FC = () => {
                   messages={[...explainMessageDetails]}
                   streaming={explainIsLoading}
                   streamingMessage={explainOutput}
-                  highlightedPartInfo={() => {}}
-                  onHighlightedClick={() => {}}
-                  renderPopover={() => <></>}
                   hasBorder={false}
                 />
                 <Button

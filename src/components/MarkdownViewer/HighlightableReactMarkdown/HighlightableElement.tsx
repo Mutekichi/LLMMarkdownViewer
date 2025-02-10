@@ -123,7 +123,9 @@ const wrapText = (
         data-offset-start={globalStart + segHighlightStart}
         data-offset-end={globalStart + segHighlightEnd}
         data-highlighted="true"
-        color="red.500"
+        color="blue.500"
+        textDecoration="underline"
+        cursor="pointer"
       >
         {highlightedText}
       </Box>,
@@ -224,7 +226,6 @@ export const HighlightableElement: React.FC<HighlightableElementProps> = ({
     const absoluteStart = parseInt(startOffset, 10);
     const absoluteEnd = parseInt(endOffset, 10);
 
-    // ハイライト済みなら onHighlightedClick を発動
     if (
       spanElement.getAttribute('data-highlighted') === 'true' &&
       onHighlightedClick
