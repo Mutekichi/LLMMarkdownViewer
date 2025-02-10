@@ -44,7 +44,7 @@ export const Message: FC<MessageProps> = ({
 
   return (
     <Box
-      position="relative"
+      // position="relative"
       px={8}
       pt={2}
       pb={2}

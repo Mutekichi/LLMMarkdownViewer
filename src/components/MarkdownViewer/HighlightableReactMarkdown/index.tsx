@@ -80,7 +80,7 @@ export const HighlightableReactMarkdown: React.FC<
   onHighlightedClick,
 }) => {
   return (
-    <Box position="relative">
+    <Box>
       <Global
         styles={`
       .katex,

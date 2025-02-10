@@ -4,6 +4,7 @@ import {
   PopoverRoot,
   PopoverTrigger,
 } from '@/components/ui/popover';
+import { useContainerRef } from '@/contexts/ContainerRefContext';
 import { Box } from '@chakra-ui/react';
 import React from 'react';
 
@@ -81,6 +82,7 @@ export const HighlightableElement: React.FC<HighlightableElementProps> = ({
   elementType = 'p',
   ...rest
 }) => {
+  const { containerRef } = useContainerRef();
   // Detect if children is a plain string
   const isPlainString = typeof children === 'string';
   const [popoverInfo, setPopoverInfo] = React.useState<PopoverInfo | null>(
@@ -228,15 +230,27 @@ export const HighlightableElement: React.FC<HighlightableElementProps> = ({
     const Element = elementType as any;
 
     return (
-      <Box position="relative">
+      <Box>
         <Box as={Element} onMouseUp={handleMouseUp} data-id={id} {...rest}>
           {segments.map(renderSegment)}
         </Box>
         {popoverInfo && renderPopover && (
           <Box
             position="absolute"
-            top={popoverInfo.anchorRect.top + window.scrollY}
-            left={popoverInfo.anchorRect.left + window.scrollX}
+            {...(() => {
+              const offset = {
+                x: 50,
+                y: -20,
+              };
+              const top =
+                containerRef.current?.getBoundingClientRect().top || 0;
+              const scrollY = containerRef.current?.scrollTop || 0;
+              const scrollX = containerRef.current?.scrollLeft || 0;
+              return {
+                top: popoverInfo.anchorRect.bottom + scrollY - top + offset.y,
+                left: popoverInfo.anchorRect.right + scrollX + offset.x,
+              };
+            })()}
             zIndex={1000}
           >
             <PopoverRoot
@@ -263,15 +277,26 @@ export const HighlightableElement: React.FC<HighlightableElementProps> = ({
    */
   const Element = elementType as any;
   return (
-    <Box position="relative">
+    <Box>
       <Box as={Element} onMouseUp={handleMouseUp} data-id={id} {...rest}>
         {children}
       </Box>
       {popoverInfo && renderPopover && (
         <Box
           position="absolute"
-          top={popoverInfo.anchorRect.top + window.scrollY}
-          left={popoverInfo.anchorRect.left + window.scrollX}
+          {...(() => {
+            const offset = {
+              x: 100,
+              y: 10,
+            };
+            const top = containerRef.current?.getBoundingClientRect().top || 0;
+            const scrollY = containerRef.current?.scrollTop || 0;
+            const scrollX = containerRef.current?.scrollLeft || 0;
+            return {
+              top: popoverInfo.anchorRect.top + scrollY - top + offset.y,
+              left: popoverInfo.anchorRect.left + scrollX + offset.x,
+            };
+          })()}
           zIndex={1000}
         >
           <PopoverRoot

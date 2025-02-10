@@ -19,6 +19,7 @@ import {
   DrawerHeader,
   DrawerRoot,
 } from '@/components/ui/drawer';
+import { useContainerRef } from '@/contexts/ContainerRefContext';
 import { AnalyticsDialog } from '../AnalyticsDialog';
 import { MessageHistory } from '../MessageHistory';
 import { MessageSettingPart } from './MessageSettingPart';
@@ -67,7 +68,7 @@ const Main: FC = () => {
     resetHistory: temporaryResetHistory,
     temporaryStreamResponse: temporaryTemporaryStreamResponse,
   } = useOpenai();
-  const containerRef = useRef<HTMLDivElement>(null);
+  const { containerRef } = useContainerRef();
   const textareaRef = useRef<HTMLTextAreaElement>(null);
 
   const [inputPrompt, setInputPrompt] = useState('');
@@ -368,6 +369,7 @@ const Main: FC = () => {
         pb={4}
         minH="20vh"
         ref={containerRef}
+        position="relative"
       >
         <MessageHistory
           messages={excludeSystemMessages(messageDetails)}
