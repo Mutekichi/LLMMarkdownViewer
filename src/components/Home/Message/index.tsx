@@ -8,6 +8,7 @@ interface MessageProps {
   messageId: string;
   bgColor?: string;
   borderColor?: string;
+  hasBorder?: boolean;
   onSelection?: (info: {
     id: string;
     startOffset: number;
@@ -36,6 +37,7 @@ export const Message: FC<MessageProps> = ({
   bgColor,
   borderColor,
   onSelection,
+  hasBorder = true,
   renderPopover,
   onHighlightedClick,
   highlightedPartInfo,
@@ -45,12 +47,12 @@ export const Message: FC<MessageProps> = ({
   return (
     <Box
       // position="relative"
-      px={8}
+      px={hasBorder ? 8 : 2}
       pt={2}
       pb={2}
       bg={bgColor}
-      border={borderColor ? `2px solid ${borderColor}` : undefined}
-      borderRadius={20}
+      border={hasBorder && borderColor ? `2px solid ${borderColor}` : undefined}
+      borderRadius={hasBorder ? 20 : undefined}
       // overflow="hidden"
     >
       <Button

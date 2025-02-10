@@ -32,6 +32,7 @@ export type HighlightInfo = {
  * Information needed to display the popover.
  */
 export interface PopoverInfo {
+  text?: string;
   absoluteStart: number;
   absoluteEnd: number;
   anchorRect: DOMRect;
@@ -60,6 +61,7 @@ export interface HighlightableElementProps {
   renderPopover?: (
     info: {
       id: string;
+      text?: string;
       absoluteStart: number;
       absoluteEnd: number;
       anchorRect: DOMRect;
@@ -101,18 +103,33 @@ export const HighlightableElement: React.FC<HighlightableElementProps> = ({
     const range = selection.getRangeAt(0);
 
     // For simplicity, only handle cases where the selection is within a single text node
-    if (range.startContainer !== range.endContainer) return;
-    if (range.startContainer.nodeType !== Node.TEXT_NODE) return;
+    if (range.startContainer !== range.endContainer) {
+      console.log('Selection across multiple nodes is not supported.');
+      return;
+    }
+    if (range.startContainer.nodeType !== Node.TEXT_NODE) {
+      console.log(
+        'Selection within non-text nodes is not supported. The selected node type is:',
+        range.startContainer.nodeType,
+      );
+      return;
+    }
 
     // Retrieve the offset start from data attributes
     let spanElement = range.startContainer.parentElement;
     while (spanElement && !spanElement.hasAttribute('data-offset-start')) {
       spanElement = spanElement.parentElement;
     }
-    if (!spanElement) return;
+    if (!spanElement) {
+      console.log('Failed to find the parent span element.');
+      return;
+    }
 
     const dataOffsetStart = spanElement.getAttribute('data-offset-start');
-    if (!dataOffsetStart) return;
+    if (!dataOffsetStart) {
+      console.log('Failed to find data-offset-start attribute.');
+      return;
+    }
 
     const segmentStart = parseInt(dataOffsetStart, 10);
     const absoluteStart = segmentStart + range.startOffset;
@@ -127,13 +144,15 @@ export const HighlightableElement: React.FC<HighlightableElementProps> = ({
         });
       }
       selection.removeAllRanges();
+      console.log('Highlighted segment clicked.');
       return;
     }
 
     // Otherwise, call renderPopover or onSelection
     if (renderPopover) {
+      const text = selection.toString();
       const rect = range.getBoundingClientRect();
-      setPopoverInfo({ absoluteStart, absoluteEnd, anchorRect: rect });
+      setPopoverInfo({ absoluteStart, absoluteEnd, text, anchorRect: rect });
     } else if (onSelection) {
       onSelection({
         id,

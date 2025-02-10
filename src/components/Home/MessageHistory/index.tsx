@@ -14,6 +14,7 @@ interface MessageHistoryProps {
     close: () => void,
   ) => React.ReactNode;
   onHighlightedClick: (msgId: string, info: any) => void;
+  hasBorder?: boolean;
 }
 
 const colors = {
@@ -35,6 +36,7 @@ interface ResponseProps {
   responseType: 'user' | 'assistant' | 'error';
   response: string;
   cost?: number;
+  hasBorder?: boolean;
   isStreaming?: boolean;
   highlightedPartInfo: { [messageId: string]: any };
   renderPopover: (info: any, close: () => void) => React.ReactNode;
@@ -47,6 +49,7 @@ const Response = memo<ResponseProps>((props) => {
     responseType,
     response,
     cost,
+    hasBorder,
     highlightedPartInfo,
     renderPopover,
     onHighlightedClick,
@@ -82,6 +85,7 @@ const Response = memo<ResponseProps>((props) => {
           renderPopover={renderPopover}
           onHighlightedClick={onHighlightedClick}
           highlightedPartInfo={highlightedPartInfo[messageId] || []}
+          hasBorder={hasBorder}
         />
         {cost && Number((cost / 1000000).toFixed(6)).toString()}
       </Box>
@@ -98,9 +102,15 @@ const PastMessages = memo<{
     close: () => void,
   ) => React.ReactNode;
   onHighlightedClick: (msgId: string, info: any) => void;
+  hasBorder?: boolean;
 }>((props) => {
-  const { messages, highlightedPartInfo, renderPopover, onHighlightedClick } =
-    props;
+  const {
+    messages,
+    highlightedPartInfo,
+    renderPopover,
+    onHighlightedClick,
+    hasBorder,
+  } = props;
   return (
     <>
       {messages.map((message, index) => (
@@ -126,6 +136,7 @@ const PastMessages = memo<{
           onHighlightedClick={(info) =>
             onHighlightedClick(message.id.toString(), info)
           }
+          hasBorder={hasBorder}
         />
       ))}
     </>
@@ -140,14 +151,16 @@ export const MessageHistory: FC<MessageHistoryProps> = (props) => {
     highlightedPartInfo,
     renderPopover,
     onHighlightedClick,
+    hasBorder,
   } = props;
   return (
-    <VStack align="stretch" p={4} minH="min-content" w="80%">
+    <VStack align="stretch" p={4} minH="min-content" w="100%">
       <PastMessages
         messages={messages}
         highlightedPartInfo={highlightedPartInfo}
         renderPopover={renderPopover}
         onHighlightedClick={onHighlightedClick}
+        hasBorder={hasBorder}
       />
       {streaming && (
         <Response
@@ -159,6 +172,7 @@ export const MessageHistory: FC<MessageHistoryProps> = (props) => {
             renderPopover('streaming', info, close)
           }
           onHighlightedClick={(info) => onHighlightedClick('streaming', info)}
+          hasBorder={hasBorder}
         />
       )}
     </VStack>

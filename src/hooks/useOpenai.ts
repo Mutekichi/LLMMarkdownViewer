@@ -38,6 +38,7 @@ export interface UseOpenaiReturn {
   stopGeneration: boolean;
   setStopGeneration: (stop: boolean) => void;
   chatMessages: ChatMessage[];
+  setChatMessages: React.Dispatch<React.SetStateAction<ChatMessage[]>>;
   messageDetails: MessageDetail[];
   resetHistory: () => void;
   temporaryStreamResponse: (
@@ -64,37 +65,6 @@ export const useOpenai = (): UseOpenaiReturn => {
   }, []);
 
   const { systemPrompt } = useSystemPrompt();
-  const sampleContent = `# Markdown記法サンプル
-
-  めちゃくちゃ長い文章の表示は、どのようになるのでしょうか？確認したいですよね。今、その長い文章がどのように出力されるかのサンプルとして、この文章が生成されています。
-  
-  ## テキストスタイル
-  **太字テキスト**
-  *イタリック*
-  ~~打ち消し線~~
-  \`inline_code.py\`
-  
-  ## リンク
-  [Google](https://www.google.com)
-  
-  ## リスト
-  - 項目1
-    - ネスト項目1-1
-    - ネスト項目1-2
-  
-  ## Math
-  $\\frac{1}{2}$ + $\\frac{1}{3}$ = $\\frac{5}{6}$ のように、数式を記述できます。
-  
-  改行するとこのようになります。
-  
-  $$ E = mc^2 $$
-  
-  
-  ## コードブロック
-  \`\`\`python
-  def hello():
-      print("Hello, World!")
-  \`\`\``;
 
   useEffect(() => {
     const loadSystemPrompt = async () => {
@@ -110,24 +80,10 @@ export const useOpenai = (): UseOpenaiReturn => {
           timestamp: new Date(),
         },
       ]);
-
-      setChatMessages((prev) => [
-        ...prev,
-        { role: 'assistant', content: sampleContent },
-      ]);
-      setMessageDetails((prev) => [
-        ...prev,
-        {
-          id: getNextMessageId(),
-          role: 'assistant',
-          content: sampleContent,
-          timestamp: new Date(),
-        },
-      ]);
     };
 
     loadSystemPrompt();
-  }, []);
+  }, [systemPrompt]);
 
   const addMessage = useCallback(
     (message?: ChatMessage, detail?: MessageDetail) => {
@@ -324,6 +280,7 @@ export const useOpenai = (): UseOpenaiReturn => {
     stopGeneration,
     setStopGeneration,
     chatMessages,
+    setChatMessages,
     messageDetails,
     resetHistory,
     temporaryStreamResponse,

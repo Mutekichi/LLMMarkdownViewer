@@ -1,6 +1,6 @@
 'use client';
 import { DialogRoot } from '@/components/ui/dialog';
-import { useOpenai } from '@/hooks/useOpenai';
+import { MessageDetail, useOpenai } from '@/hooks/useOpenai';
 import { checkInputLength, excludeSystemMessages } from '@/utils/chatUtils';
 import { Box, Button, Center, Input, Text, VStack } from '@chakra-ui/react';
 import { FC, useCallback, useEffect, useRef, useState } from 'react';
@@ -36,11 +36,20 @@ interface Memos {
   }[];
 }
 
+interface SupplementaryMessage {
+  [messageId: string]: {
+    id: string;
+    range: HighlightRange;
+    supplementary: MessageDetail;
+  };
+}
+
 interface CurrentSelection {
   msgId: string;
   id: string;
   startOffset: number;
   endOffset: number;
+  text?: string;
 }
 
 const Main: FC = () => {
@@ -68,6 +77,20 @@ const Main: FC = () => {
     resetHistory: temporaryResetHistory,
     temporaryStreamResponse: temporaryTemporaryStreamResponse,
   } = useOpenai();
+
+  const {
+    output: explainOutput,
+    isLoading: explainIsLoading,
+    error: explainError,
+    streamResponse: explainStreamResponse,
+    stopGeneration: explainStopGeneration,
+    setStopGeneration: explainSetStopGeneration,
+    chatMessages: explainChatMessages,
+    setChatMessages: explainSetChatMessages,
+    messageDetails: explainMessageDetails,
+    resetHistory: explainResetHistory,
+  } = useOpenai();
+
   const { containerRef } = useContainerRef();
   const textareaRef = useRef<HTMLTextAreaElement>(null);
 
@@ -83,6 +106,8 @@ const Main: FC = () => {
   const [highlightedPartInfo, setHighlightedPartInfo] =
     useState<HighlightedPartInfo>({});
   const [memos, setMemos] = useState<Memos>({});
+  const [supplementaryMessages, setSupplementaryMessages] =
+    useState<SupplementaryMessage>({});
 
   const [currentSelection, setCurrentSelection] =
     useState<CurrentSelection | null>(null);
@@ -95,6 +120,7 @@ const Main: FC = () => {
       msgId: string,
       info: {
         id: string;
+        text?: string;
         absoluteStart: number;
         absoluteEnd: number;
         anchorRect: DOMRect;
@@ -130,7 +156,13 @@ const Main: FC = () => {
                 endOffset: info.absoluteEnd,
               });
               setActionType('explain');
-              console.log('Explain in more detail for element', info.id);
+              explainSetChatMessages([...chatMessages]);
+              setInputText(
+                info.text
+                  ? 'I\'d like to learn more about "' + info.text + '"'
+                  : '',
+              );
+              setDrawerOpen(true);
               close();
             }}
             mb={2}
@@ -371,14 +403,16 @@ const Main: FC = () => {
         ref={containerRef}
         position="relative"
       >
-        <MessageHistory
-          messages={excludeSystemMessages(messageDetails)}
-          streaming={isLoading}
-          streamingMessage={output}
-          highlightedPartInfo={highlightedPartInfo}
-          onHighlightedClick={onHighlightedClick}
-          renderPopover={renderPopover}
-        />
+        <Box w="80%">
+          <MessageHistory
+            messages={excludeSystemMessages(messageDetails)}
+            streaming={isLoading}
+            streamingMessage={output}
+            highlightedPartInfo={highlightedPartInfo}
+            onHighlightedClick={onHighlightedClick}
+            renderPopover={renderPopover}
+          />
+        </Box>
         {isTemporaryChatOpen && (
           <VStack
             w="80%"
@@ -399,14 +433,16 @@ const Main: FC = () => {
                 will not be saved.
               </Text>
             </VStack>
-            <MessageHistory
-              messages={excludeSystemMessages(temporaryMessageDetails)}
-              streaming={temporaryIsLoading}
-              streamingMessage={temporaryOutput}
-              highlightedPartInfo={highlightedPartInfo}
-              onHighlightedClick={onHighlightedClick}
-              renderPopover={renderPopover}
-            />
+            <Box w="80%">
+              <MessageHistory
+                messages={excludeSystemMessages(temporaryMessageDetails)}
+                streaming={temporaryIsLoading}
+                streamingMessage={temporaryOutput}
+                highlightedPartInfo={highlightedPartInfo}
+                onHighlightedClick={onHighlightedClick}
+                renderPopover={renderPopover}
+              />{' '}
+            </Box>
           </VStack>
         )}
       </VStack>
@@ -442,7 +478,11 @@ const Main: FC = () => {
           temporaryResetHistory={temporaryResetHistory}
         />
       </VStack>
-      <DrawerRoot open={drawerOpen} onOpenChange={(e) => setDrawerOpen(e.open)}>
+      <DrawerRoot
+        open={drawerOpen}
+        onOpenChange={(e) => setDrawerOpen(e.open)}
+        size="md"
+      >
         <DrawerContent>
           <DrawerHeader>
             {actionType === 'memo' ? 'Memo' : 'Explain in More Detail'}
@@ -455,6 +495,35 @@ const Main: FC = () => {
               value={inputText}
               onChange={(e) => setInputText(e.target.value)}
             />
+            {actionType === 'explain' && (
+              <VStack mt={2}>
+                <Text fontSize="sm" color="gray.500">
+                  This will be sent to the AI model to generate more detailed
+                  explanation.
+                </Text>
+                <MessageHistory
+                  messages={[...explainMessageDetails]}
+                  streaming={explainIsLoading}
+                  streamingMessage={explainOutput}
+                  highlightedPartInfo={() => {}}
+                  onHighlightedClick={() => {}}
+                  renderPopover={() => <></>}
+                  hasBorder={false}
+                />
+                <Button
+                  colorScheme="blue"
+                  onClick={() => {
+                    for (const msg of explainChatMessages) {
+                      // show 50 characters of the message
+                      const text = msg.content.slice(0, 50);
+                      console.log('text', text);
+                    }
+                    explainStreamResponse(inputText, model);
+                    setInputText('');
+                  }}
+                />
+              </VStack>
+            )}
           </DrawerBody>
           <DrawerFooter>
             <Button
