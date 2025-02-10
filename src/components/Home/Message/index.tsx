@@ -45,8 +45,6 @@ export const Message: FC<MessageProps> = ({
 }) => {
   const [isCollapsed, setIsCollapsed] = useState(false);
 
-  console.log(highlight ? 'highlight' : 'no highlight');
-
   return (
     <Box
       // position="relative"

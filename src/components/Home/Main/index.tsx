@@ -36,12 +36,14 @@ interface Memos {
   }[];
 }
 
-interface SupplementaryMessage {
-  [messageId: string]: {
-    id: string;
-    range: HighlightRange;
-    supplementary: MessageDetail;
-  };
+interface SupplementaryMessageEntry {
+  id: string;
+  range: HighlightRange;
+  supplementary: MessageDetail | null;
+}
+
+interface SupplementaryMessages {
+  [messageId: string]: SupplementaryMessageEntry[];
 }
 
 interface CurrentSelection {
@@ -102,12 +104,14 @@ const Main: FC = () => {
   const [isTemporaryChatOpen, setIsTemporaryChatOpen] = useState(false);
   const [isAnalyticsOpen, setIsAnalyticsOpen] = useState(false);
   const [isAutoScrollMode, setIsAutoScrollMode] = useState(false);
+  const [shouldStartExplanation, setShouldStartExplanation] = useState(false);
+  const [textToExplain, setTextToExplain] = useState('');
 
   const [highlightedPartInfo, setHighlightedPartInfo] =
     useState<HighlightedPartInfo>({});
   const [memos, setMemos] = useState<Memos>({});
   const [supplementaryMessages, setSupplementaryMessages] =
-    useState<SupplementaryMessage>({});
+    useState<SupplementaryMessages>({});
 
   const [currentSelection, setCurrentSelection] =
     useState<CurrentSelection | null>(null);
@@ -156,14 +160,18 @@ const Main: FC = () => {
                 endOffset: info.absoluteEnd,
               });
               setActionType('explain');
-              explainSetChatMessages([...chatMessages]);
               setInputText(
                 info.text
-                  ? 'I\'d like to learn more about "' + info.text + '"'
+                  ? info.text.length > 20
+                    ? info.text.slice(0, 20) + '...'
+                    : info.text
                   : '',
               );
               setDrawerOpen(true);
               close();
+              explainSetChatMessages([...chatMessages]);
+              setTextToExplain(info.text || '');
+              setShouldStartExplanation(true);
             }}
             mb={2}
           >
@@ -175,7 +183,7 @@ const Main: FC = () => {
         </Box>
       );
     },
-    [],
+    [chatMessages],
   );
 
   const onHighlightedClick = useCallback(
@@ -237,7 +245,21 @@ const Main: FC = () => {
         );
         return { ...prev, [msgId]: newMemos };
       });
+
+      setSupplementaryMessages((prev) => {
+        const currentList = prev[msgId] || [];
+        const newList = currentList.filter(
+          (entry) =>
+            !(
+              entry.id === id &&
+              entry.range.startOffset === startOffset &&
+              entry.range.endOffset === endOffset
+            ),
+        );
+        return { ...prev, [msgId]: newList };
+      });
     }
+
     setDrawerOpen(false);
     setCurrentSelection(null);
     setActionType(null);
@@ -301,7 +323,79 @@ const Main: FC = () => {
         }
       });
     } else if (currentSelection && actionType === 'explain') {
-      console.log('Explain in more detail for', currentSelection);
+      setHighlightedPartInfo((prev) => {
+        const currentHighlights = prev[currentSelection.msgId] || [];
+        const existingIndex = currentHighlights.findIndex(
+          (item) => item.id === currentSelection.id,
+        );
+        const newRange: HighlightRange = {
+          startOffset: currentSelection.startOffset,
+          endOffset: currentSelection.endOffset,
+        };
+        if (existingIndex >= 0) {
+          const existing = currentHighlights[existingIndex];
+          const alreadyExists = existing.ranges.some(
+            (r) =>
+              r.startOffset === newRange.startOffset &&
+              r.endOffset === newRange.endOffset,
+          );
+          if (!alreadyExists) {
+            const updated = {
+              ...existing,
+              ranges: [...existing.ranges, newRange],
+            };
+            const newHighlights = [...currentHighlights];
+            newHighlights[existingIndex] = updated;
+            return { ...prev, [currentSelection.msgId]: newHighlights };
+          }
+          return prev;
+        } else {
+          return {
+            ...prev,
+            [currentSelection.msgId]: [
+              ...currentHighlights,
+              { id: currentSelection.id, ranges: [newRange] },
+            ],
+          };
+        }
+      });
+      setSupplementaryMessages((prev) => {
+        const supplementaryDetail =
+          explainMessageDetails && explainMessageDetails.length > 0
+            ? explainMessageDetails[explainMessageDetails.length - 1]
+            : null;
+        const currentList = prev[currentSelection.msgId] || [];
+        const existingIndex = currentList.findIndex(
+          (entry) =>
+            entry.id === currentSelection.id &&
+            entry.range.startOffset === currentSelection.startOffset &&
+            entry.range.endOffset === currentSelection.endOffset,
+        );
+        if (existingIndex >= 0) {
+          const updatedEntry = {
+            ...currentList[existingIndex],
+            supplementary: supplementaryDetail,
+          };
+          const newList = [...currentList];
+          newList[existingIndex] = updatedEntry;
+          return { ...prev, [currentSelection.msgId]: newList };
+        } else {
+          return {
+            ...prev,
+            [currentSelection.msgId]: [
+              ...currentList,
+              {
+                id: currentSelection.id,
+                range: {
+                  startOffset: currentSelection.startOffset,
+                  endOffset: currentSelection.endOffset,
+                },
+                supplementary: supplementaryDetail,
+              },
+            ],
+          };
+        }
+      });
     }
     setDrawerOpen(false);
     setCurrentSelection(null);
@@ -330,6 +424,16 @@ const Main: FC = () => {
   );
 
   useEffect(() => {
+    if (shouldStartExplanation) {
+      explainStreamResponse(
+        `${textToExplain}について、さらに説明してください。回答は、なるべく「${textToExplain}とは、」に続く形でお願いします。`,
+        model,
+      );
+      setShouldStartExplanation(false);
+    }
+  }, [shouldStartExplanation, textToExplain, explainStreamResponse, model]);
+
+  useEffect(() => {
     // this effect is fired when starting or finishing the generation
     // loading -> not loading means the generation is finished
     if (!(isLoading || temporaryIsLoading)) {
@@ -344,7 +448,7 @@ const Main: FC = () => {
   useEffect(() => {
     const intervalId = setInterval(() => {
       if (isAutoScrollMode) scrollDown(true);
-    }, 1000);
+    }, 500);
 
     return () => {
       clearInterval(intervalId);
@@ -489,39 +593,28 @@ const Main: FC = () => {
       >
         <DrawerContent>
           <DrawerHeader>
-            {actionType === 'memo' ? 'Memo' : 'Explain in More Detail'}
+            {actionType === 'memo' ? 'Memo' : 'More about ' + inputText}
           </DrawerHeader>
           <DrawerBody>
-            <Input
-              placeholder={
-                actionType === 'memo' ? 'Enter memo...' : 'Enter explanation...'
-              }
-              value={inputText}
-              onChange={(e) => setInputText(e.target.value)}
-            />
+            {actionType === 'memo' && (
+              <Input
+                placeholder={
+                  actionType === 'memo'
+                    ? 'Enter memo...'
+                    : 'Enter explanation...'
+                }
+                value={inputText}
+                onChange={(e) => setInputText(e.target.value)}
+              />
+            )}
             {actionType === 'explain' && (
               <VStack mt={2}>
-                <Text fontSize="sm" color="gray.500">
-                  This will be sent to the AI model to generate more detailed
-                  explanation.
-                </Text>
                 <MessageHistory
-                  messages={[...explainMessageDetails]}
+                  // exclude the system message and the prompt for "...について、もう少しだけ簡潔に説明してください。"
+                  messages={explainMessageDetails.slice(2)}
                   streaming={explainIsLoading}
                   streamingMessage={explainOutput}
                   hasBorder={false}
-                />
-                <Button
-                  colorScheme="blue"
-                  onClick={() => {
-                    for (const msg of explainChatMessages) {
-                      // show 50 characters of the message
-                      const text = msg.content.slice(0, 50);
-                      console.log('text', text);
-                    }
-                    explainStreamResponse(inputText, model);
-                    setInputText('');
-                  }}
                 />
               </VStack>
             )}
