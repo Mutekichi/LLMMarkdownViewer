@@ -2,7 +2,7 @@ import { createChatStream } from '@/lib/openaiService';
 import { handleStreamResponse } from '@/lib/streamHandler';
 import { logUsage } from '@/lib/usageServices';
 import OpenAI from 'openai';
-import { useCallback, useEffect, useState } from 'react';
+import { useCallback, useEffect, useRef, useState } from 'react';
 import { OpenaiModelType } from '../config/llm-models';
 import { useSystemPrompt } from './useSystemPrompt';
 
@@ -12,6 +12,7 @@ export interface ChatMessage {
 }
 
 export interface MessageDetail {
+  id: number;
   role: 'user' | 'assistant' | 'error';
   content: string;
   model?: OpenaiModelType;
@@ -55,6 +56,13 @@ export const useOpenai = (): UseOpenaiReturn => {
   const [chatMessages, setChatMessages] = useState<ChatMessage[]>([]);
   const [messageDetails, setMessageDetails] = useState<MessageDetail[]>([]);
 
+  const messageIdRef = useRef<number>(1);
+  const getNextMessageId = useCallback(() => {
+    const currentId = messageIdRef.current;
+    messageIdRef.current += 1;
+    return currentId;
+  }, []);
+
   const { systemPrompt } = useSystemPrompt();
   const sampleContent = `# Markdown記法サンプル
 
@@ -64,7 +72,7 @@ export const useOpenai = (): UseOpenaiReturn => {
   **太字テキスト**
   *イタリック*
   ~~打ち消し線~~
-  \`インラインコード\`
+  \`inline_code.py\`
   
   ## リンク
   [Google](https://www.google.com)
@@ -95,7 +103,12 @@ export const useOpenai = (): UseOpenaiReturn => {
       // role: 'system' cannot be applied to some models, so it is not used
       setChatMessages([{ role: 'user', content: systemPrompt }]);
       setMessageDetails([
-        { role: 'user', content: systemPrompt, timestamp: new Date() },
+        {
+          id: getNextMessageId(),
+          role: 'user',
+          content: systemPrompt,
+          timestamp: new Date(),
+        },
       ]);
 
       setChatMessages((prev) => [
@@ -105,6 +118,7 @@ export const useOpenai = (): UseOpenaiReturn => {
       setMessageDetails((prev) => [
         ...prev,
         {
+          id: getNextMessageId(),
           role: 'assistant',
           content: sampleContent,
           timestamp: new Date(),
@@ -131,7 +145,14 @@ export const useOpenai = (): UseOpenaiReturn => {
     );
     setMessageDetails(
       systemPrompt
-        ? [{ role: 'user', content: systemPrompt, timestamp: new Date() }]
+        ? [
+            {
+              id: getNextMessageId(),
+              role: 'user',
+              content: systemPrompt,
+              timestamp: new Date(),
+            },
+          ]
         : [],
     );
     setIsLoading(false);
@@ -185,7 +206,13 @@ export const useOpenai = (): UseOpenaiReturn => {
 
         addMessage(
           { role: 'user', content: prompt },
-          { role: 'user', content: prompt, model, timestamp: new Date() },
+          {
+            id: getNextMessageId(),
+            role: 'user',
+            content: prompt,
+            model,
+            timestamp: new Date(),
+          },
         );
 
         const messages = [...chatMessages, { role: 'user', content: prompt }];
@@ -195,6 +222,7 @@ export const useOpenai = (): UseOpenaiReturn => {
           addMessage(
             { role: 'assistant', content: fullResponse },
             {
+              id: getNextMessageId(),
               role: 'assistant',
               content: fullResponse,
               model,
@@ -209,6 +237,7 @@ export const useOpenai = (): UseOpenaiReturn => {
           err instanceof Error ? err.message : 'An unexpected error occurred.';
         setError(errorMsg);
         addMessage(undefined, {
+          id: getNextMessageId(),
           role: 'error',
           content: errorMsg,
           timestamp: new Date(),
@@ -245,7 +274,13 @@ export const useOpenai = (): UseOpenaiReturn => {
 
         addMessage(
           { role: 'user', content: prompt },
-          { role: 'user', content: prompt, model, timestamp: new Date() },
+          {
+            id: getNextMessageId(),
+            role: 'user',
+            content: prompt,
+            model,
+            timestamp: new Date(),
+          },
         );
 
         const stream = await createChatStream(temporaryMessages, model, image);
@@ -254,6 +289,7 @@ export const useOpenai = (): UseOpenaiReturn => {
           addMessage(
             { role: 'assistant', content: fullResponse },
             {
+              id: getNextMessageId(),
               role: 'assistant',
               content: fullResponse,
               model,
@@ -268,6 +304,7 @@ export const useOpenai = (): UseOpenaiReturn => {
           err instanceof Error ? err.message : 'An unexpected error occurred.';
         setError(errorMsg);
         addMessage(undefined, {
+          id: getNextMessageId(),
           role: 'error',
           content: errorMsg,
           timestamp: new Date(),

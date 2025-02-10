@@ -1,43 +1,49 @@
 'use client';
 import { DialogRoot } from '@/components/ui/dialog';
-import { Switch } from '@/components/ui/switch';
-import { Tooltip } from '@/components/ui/tooltip';
 import { useOpenai } from '@/hooks/useOpenai';
 import { checkInputLength, excludeSystemMessages } from '@/utils/chatUtils';
-import {
-  Box,
-  Button,
-  Center,
-  Flex,
-  HStack,
-  Icon,
-  Text,
-  VStack,
-} from '@chakra-ui/react';
-import { FC, useEffect, useRef, useState } from 'react';
-import { RxTrash } from 'react-icons/rx';
-import {
-  OPENAI_MODEL_DISPLAY_NAMES,
-  OpenaiModelType,
-} from '../../../config/llm-models';
+import { Box, Button, Center, Input, Text, VStack } from '@chakra-ui/react';
+import { FC, useCallback, useEffect, useRef, useState } from 'react';
+import { OpenaiModelType } from '../../../config/llm-models';
 import CustomTextInput from '../../CustomInput';
-import { PopoverSelect, PopoverSelectOption } from '../../PopoverSelect';
 import { AppHeader } from '../AppHeader';
-import { MessageHistory } from '../MessageHistory';
 
+import {
+  HighlightInfo,
+  HighlightRange,
+} from '@/components/MarkdownViewer/HighlightableReactMarkdown/HighlightableElement';
+import {
+  DrawerBody,
+  DrawerContent,
+  DrawerFooter,
+  DrawerHeader,
+  DrawerRoot,
+} from '@/components/ui/drawer';
+import { useContainerRef } from '@/contexts/ContainerRefContext';
 import { AnalyticsDialog } from '../AnalyticsDialog';
+import { MessageHistory } from '../MessageHistory';
+import { MessageSettingPart } from './MessageSettingPart';
 
-const createModelOptions = (): PopoverSelectOption<OpenaiModelType>[] => {
-  return Object.entries(OPENAI_MODEL_DISPLAY_NAMES).map(([value, label]) => ({
-    value: value as OpenaiModelType,
-    label,
-  }));
-};
+interface HighlightedPartInfo {
+  [messageId: string]: HighlightInfo[];
+}
+
+interface Memos {
+  [messageId: string]: {
+    id: string;
+    range: HighlightRange;
+    memo: string;
+  }[];
+}
+
+interface CurrentSelection {
+  msgId: string;
+  id: string;
+  startOffset: number;
+  endOffset: number;
+}
 
 const Main: FC = () => {
-  const [inputText, setInputText] = useState('');
-  const textareaRef = useRef<HTMLTextAreaElement>(null);
-
   const {
     output,
     isLoading,
@@ -61,28 +67,267 @@ const Main: FC = () => {
     messageDetails: temporaryMessageDetails,
     resetHistory: temporaryResetHistory,
     temporaryStreamResponse: temporaryTemporaryStreamResponse,
-    // } = useMockOpenai();
   } = useOpenai();
-  const [isModelSelectPopoverOpen, setIsModelSelectPopoverOpen] =
-    useState(false);
-  const [isChecked, setIsChecked] = useState(false);
-  const [isAnalyticsOpen, setIsAnalyticsOpen] = useState(false);
+  const { containerRef } = useContainerRef();
+  const textareaRef = useRef<HTMLTextAreaElement>(null);
+
+  const [inputPrompt, setInputPrompt] = useState('');
   const [model, setModel] = useState<OpenaiModelType>(OpenaiModelType.o1mini);
 
-  const onTemporaryChatButtonClick = () => {
-    if (isChecked) {
-      temporaryResetHistory();
+  const [isModelSelectPopoverOpen, setIsModelSelectPopoverOpen] =
+    useState(false);
+  const [isTemporaryChatOpen, setIsTemporaryChatOpen] = useState(false);
+  const [isAnalyticsOpen, setIsAnalyticsOpen] = useState(false);
+  const [isAutoScrollMode, setIsAutoScrollMode] = useState(false);
+
+  const [highlightedPartInfo, setHighlightedPartInfo] =
+    useState<HighlightedPartInfo>({});
+  const [memos, setMemos] = useState<Memos>({});
+
+  const [currentSelection, setCurrentSelection] =
+    useState<CurrentSelection | null>(null);
+  const [actionType, setActionType] = useState<'memo' | 'explain' | null>(null);
+  const [drawerOpen, setDrawerOpen] = useState(false);
+  const [inputText, setInputText] = useState('');
+
+  const renderPopover = useCallback(
+    (
+      msgId: string,
+      info: {
+        id: string;
+        absoluteStart: number;
+        absoluteEnd: number;
+        anchorRect: DOMRect;
+      },
+      close: () => void,
+    ) => {
+      return (
+        <Box p={2}>
+          <Button
+            colorScheme="blue"
+            onClick={() => {
+              setCurrentSelection({
+                msgId,
+                id: info.id,
+                startOffset: info.absoluteStart,
+                endOffset: info.absoluteEnd,
+              });
+              setActionType('memo');
+              setDrawerOpen(true);
+              close();
+            }}
+            mb={2}
+          >
+            Add memo
+          </Button>
+          <Button
+            colorScheme="blue"
+            onClick={() => {
+              setCurrentSelection({
+                msgId,
+                id: info.id,
+                startOffset: info.absoluteStart,
+                endOffset: info.absoluteEnd,
+              });
+              setActionType('explain');
+              console.log('Explain in more detail for element', info.id);
+              close();
+            }}
+            mb={2}
+          >
+            Explain in more detail
+          </Button>
+          <Button variant="ghost" onClick={close}>
+            Cancel
+          </Button>
+        </Box>
+      );
+    },
+    [],
+  );
+
+  const onHighlightedClick = useCallback(
+    (msgId: string, info: { id: string; range: HighlightRange }) => {
+      const memoEntry = memos[msgId]?.find(
+        (m) =>
+          m.id === info.id &&
+          m.range.startOffset === info.range.startOffset &&
+          m.range.endOffset === info.range.endOffset,
+      );
+      setCurrentSelection({
+        msgId,
+        id: info.id,
+        startOffset: info.range.startOffset,
+        endOffset: info.range.endOffset,
+      });
+      setActionType('memo');
+      setInputText(memoEntry ? memoEntry.memo : '');
+      setDrawerOpen(true);
+    },
+    [memos],
+  );
+
+  const handleDrawerDelete = useCallback(() => {
+    if (currentSelection) {
+      const { msgId, id, startOffset, endOffset } = currentSelection;
+
+      setHighlightedPartInfo((prev) => {
+        const currentHighlights = prev[msgId] || [];
+        // save ranges that are not the same as the current selection
+        const newHighlights = currentHighlights
+          .map((item) => {
+            if (item.id === id) {
+              return {
+                id: item.id,
+                ranges: item.ranges.filter(
+                  (r) =>
+                    !(
+                      r.startOffset === startOffset && r.endOffset === endOffset
+                    ),
+                ),
+              };
+            }
+            return item;
+          })
+          .filter((item) => item.ranges.length > 0);
+        return { ...prev, [msgId]: newHighlights };
+      });
+
+      setMemos((prev) => {
+        const currentMemos = prev[msgId] || [];
+        const newMemos = currentMemos.filter(
+          (m) =>
+            !(
+              m.id === id &&
+              m.range.startOffset === startOffset &&
+              m.range.endOffset === endOffset
+            ),
+        );
+        return { ...prev, [msgId]: newMemos };
+      });
     }
-    setIsChecked(!isChecked);
-  };
+    setDrawerOpen(false);
+    setCurrentSelection(null);
+    setActionType(null);
+    setInputText('');
+  }, [currentSelection, setHighlightedPartInfo, setMemos, setDrawerOpen]);
+
+  const handleDrawerSave = useCallback(() => {
+    if (currentSelection && actionType === 'memo') {
+      const { msgId, id, startOffset, endOffset } = currentSelection;
+      setHighlightedPartInfo((prev) => {
+        const currentHighlights = prev[msgId] || [];
+        const existingIndex = currentHighlights.findIndex(
+          (item) => item.id === id,
+        );
+        const newRange: HighlightRange = { startOffset, endOffset };
+        if (existingIndex >= 0) {
+          const existing = currentHighlights[existingIndex];
+          const alreadyExists = existing.ranges.some(
+            (r) =>
+              r.startOffset === newRange.startOffset &&
+              r.endOffset === newRange.endOffset,
+          );
+          if (!alreadyExists) {
+            const updated = {
+              ...existing,
+              ranges: [...existing.ranges, newRange],
+            };
+            const newHighlights = [...currentHighlights];
+            newHighlights[existingIndex] = updated;
+            return { ...prev, [msgId]: newHighlights };
+          }
+          return prev;
+        } else {
+          return {
+            ...prev,
+            [msgId]: [...currentHighlights, { id, ranges: [newRange] }],
+          };
+        }
+      });
+      setMemos((prev) => {
+        const currentMemos = prev[msgId] || [];
+        const idx = currentMemos.findIndex(
+          (m) =>
+            m.id === id &&
+            m.range.startOffset === startOffset &&
+            m.range.endOffset === endOffset,
+        );
+        if (idx >= 0) {
+          const updated = { ...currentMemos[idx], memo: inputText };
+          const newMemos = [...currentMemos];
+          newMemos[idx] = updated;
+          return { ...prev, [msgId]: newMemos };
+        } else {
+          return {
+            ...prev,
+            [msgId]: [
+              ...currentMemos,
+              { id, range: { startOffset, endOffset }, memo: inputText },
+            ],
+          };
+        }
+      });
+    } else if (currentSelection && actionType === 'explain') {
+      console.log('Explain in more detail for', currentSelection);
+    }
+    setDrawerOpen(false);
+    setCurrentSelection(null);
+    setActionType(null);
+    setInputText('');
+  }, [currentSelection, actionType, inputText]);
+
+  const isNearBottom = useCallback(() => {
+    if (containerRef.current) {
+      const { scrollTop, scrollHeight, clientHeight } = containerRef.current;
+      return scrollHeight - scrollTop - clientHeight < 300;
+    }
+    return false;
+  }, [containerRef]);
+
+  const scrollDown = useCallback(
+    (onlyWhenNearBottom: boolean = false) => {
+      if (containerRef.current && (!onlyWhenNearBottom || isNearBottom())) {
+        containerRef.current.scrollTo({
+          top: containerRef.current.scrollHeight,
+          behavior: 'smooth',
+        });
+      }
+    },
+    [containerRef, isNearBottom],
+  );
+
+  useEffect(() => {
+    // this effect is fired when starting or finishing the generation
+    // loading -> not loading means the generation is finished
+    if (!(isLoading || temporaryIsLoading)) {
+      scrollDown(true);
+      setIsAutoScrollMode(false);
+      // not loading -> loading means the generation is starting
+    } else {
+      setIsAutoScrollMode(true);
+    }
+  }, [isLoading, temporaryIsLoading, scrollDown]);
+
+  useEffect(() => {
+    const intervalId = setInterval(() => {
+      if (isAutoScrollMode) scrollDown(true);
+    }, 1000);
+
+    return () => {
+      clearInterval(intervalId);
+    };
+  }, [isAutoScrollMode, scrollDown]);
+
+  useEffect(() => {
+    if (isTemporaryChatOpen && containerRef.current) scrollDown(false);
+  }, [isTemporaryChatOpen, scrollDown]);
 
   useEffect(() => {
     const handleKeyDown = (e: KeyboardEvent) => {
-      if (e.key == 'Enter' && document.activeElement !== textareaRef.current) {
+      if (e.key === 'Enter' && document.activeElement !== textareaRef.current) {
         // focus on textarea if the user presses Enter key and the textarea is not focused
         textareaRef.current?.focus();
-        // prevent default behavior if the textarea is focused
-        // otherwise, the Enter will trigger the new line in the textarea
         e.preventDefault();
       }
     };
@@ -116,14 +361,25 @@ const Main: FC = () => {
         <AppHeader />
         <AnalyticsDialog />
       </DialogRoot>
-      <VStack flex="1" overflowY="auto" w="100%" pb={4} minH="20vh">
+
+      <VStack
+        flex="1"
+        overflowY="auto"
+        w="100%"
+        pb={4}
+        minH="20vh"
+        ref={containerRef}
+        position="relative"
+      >
         <MessageHistory
           messages={excludeSystemMessages(messageDetails)}
-          // chatMessages={chatMessages}
           streaming={isLoading}
           streamingMessage={output}
+          highlightedPartInfo={highlightedPartInfo}
+          onHighlightedClick={onHighlightedClick}
+          renderPopover={renderPopover}
         />
-        {isChecked && (
+        {isTemporaryChatOpen && (
           <VStack
             w="80%"
             gap={2}
@@ -147,105 +403,78 @@ const Main: FC = () => {
               messages={excludeSystemMessages(temporaryMessageDetails)}
               streaming={temporaryIsLoading}
               streamingMessage={temporaryOutput}
+              highlightedPartInfo={highlightedPartInfo}
+              onHighlightedClick={onHighlightedClick}
+              renderPopover={renderPopover}
             />
           </VStack>
         )}
       </VStack>
+
       <VStack w="100%" gap={2} pt={4} justify="space-between" bgColor="#f5f5f5">
         <Center w="80%">
           <CustomTextInput
             textareaRef={textareaRef}
-            onChange={(value) => setInputText(value)}
+            onChange={(value) => setInputPrompt(value)}
             onButtonClick={(value) => {
-              if (isChecked) {
+              if (isTemporaryChatOpen) {
                 temporaryTemporaryStreamResponse(value, model);
-                // temporarySetStopGeneration(false);
+                setInputPrompt('');
               } else {
                 streamResponse(value, model);
                 setStopGeneration(false);
+                setInputPrompt('');
               }
-              setInputText('');
             }}
-            buttonDisabled={!checkInputLength(inputText)}
+            buttonDisabled={!checkInputLength(inputPrompt)}
             inputDisabled={isLoading}
           />
         </Center>
-        <HStack w="80%" h="100%" gap={4}>
-          <PopoverSelect
-            options={createModelOptions()}
-            value={model}
-            onChange={setModel}
-            isOpen={isModelSelectPopoverOpen}
-            setIsOpen={setIsModelSelectPopoverOpen}
-            onOpen={() => setIsModelSelectPopoverOpen(true)}
-            onClose={() => setIsModelSelectPopoverOpen(false)}
-            disabled={isLoading}
-            tooltipLabelOnDisabled="You can't change the model while generating."
-          />
-          <Tooltip
-            content="Temporary chat"
-            positioning={{ placement: 'right-end' }}
-            openDelay={100}
-            closeDelay={100}
-          >
-            <HStack
-              h="100%"
-              alignItems="flex-end"
-              pb={2}
-              gap={0}
-              onClick={onTemporaryChatButtonClick}
-              cursor="pointer"
-              borderRadius={10}
-              _hover={{ bgColor: 'blackAlpha.50' }}
-            >
-              <Box
-                display="flex"
-                alignItems="flex-start"
-                h="100%"
-                opacity={isChecked ? 1 : 0.5}
-              >
-                {/* <img src="/icons/vanish.svg" alt="SVG" width={40} height={40} /> */}
-                <img
-                  src="/icons/temporary_chat.svg"
-                  alt="SVG"
-                  width={40}
-                  height={40}
-                />
-              </Box>
-              <Flex justify="flex-end">
-                <Switch size="lg" checked={isChecked} />
-              </Flex>
-            </HStack>
-          </Tooltip>
-          <Tooltip
-            content="Clear all history"
-            positioning={{ placement: 'right-end' }}
-            openDelay={100}
-            closeDelay={100}
-          >
-            <Button
-              display="flex"
-              h="100%"
-              w="80px"
-              bgColor="transparent"
-              opacity={1}
-              px={2}
-              borderRadius={10}
-              _hover={{ bgColor: 'blackAlpha.50' }}
-              onClick={() => {
-                resetHistory();
-                if (isChecked) {
-                  temporaryResetHistory();
-                  setIsChecked(false);
-                }
-              }}
-            >
-              {/* <img src="/icons/vanish.svg" alt="SVG" width={60} height={60} /> */}
-              <Icon as={RxTrash} boxSize={10} color="blackAlpha.800" />
-            </Button>
-          </Tooltip>
-        </HStack>
+        <MessageSettingPart
+          model={model}
+          setModel={setModel}
+          isModelSelectPopoverOpen={isModelSelectPopoverOpen}
+          setIsModelSelectPopoverOpen={setIsModelSelectPopoverOpen}
+          isLoading={isLoading}
+          isTemporaryChatOpen={isTemporaryChatOpen}
+          setIsTemporaryChatOpen={setIsTemporaryChatOpen}
+          resetHistory={resetHistory}
+          temporaryResetHistory={temporaryResetHistory}
+        />
       </VStack>
+      <DrawerRoot open={drawerOpen} onOpenChange={(e) => setDrawerOpen(e.open)}>
+        <DrawerContent>
+          <DrawerHeader>
+            {actionType === 'memo' ? 'Memo' : 'Explain in More Detail'}
+          </DrawerHeader>
+          <DrawerBody>
+            <Input
+              placeholder={
+                actionType === 'memo' ? 'Enter memo...' : 'Enter explanation...'
+              }
+              value={inputText}
+              onChange={(e) => setInputText(e.target.value)}
+            />
+          </DrawerBody>
+          <DrawerFooter>
+            <Button
+              variant="outline"
+              mr={3}
+              onClick={() => setDrawerOpen(false)}
+            >
+              Cancel
+            </Button>
+            {currentSelection && (
+              <Button colorScheme="red" mr={3} onClick={handleDrawerDelete}>
+                Delete
+              </Button>
+            )}
+            <Button colorScheme="blue" onClick={handleDrawerSave}>
+              Save
+            </Button>
+          </DrawerFooter>
+        </DrawerContent>
+      </DrawerRoot>
     </VStack>
   );
 };

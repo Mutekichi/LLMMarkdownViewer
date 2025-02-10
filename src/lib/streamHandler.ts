@@ -1,5 +1,3 @@
-import { calculateCost, OpenaiModelType } from '../config/llm-models';
-
 export async function handleStreamResponse(
   stream: AsyncIterable<any>,
   stopGeneration: () => boolean,
@@ -17,26 +15,4 @@ export async function handleStreamResponse(
   }
 
   return { fullResponse, usageDetail };
-}
-
-export async function logUsage(
-  model: OpenaiModelType,
-  usageDetail: { prompt_tokens: number; completion_tokens: number },
-) {
-  const { prompt_tokens, completion_tokens } = usageDetail;
-  const cost = calculateCost(model, prompt_tokens, completion_tokens);
-  try {
-    await fetch('/api/usage-logs', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({
-        promptTokens: prompt_tokens,
-        completionTokens: completion_tokens,
-        model,
-        cost,
-      }),
-    });
-  } catch (error) {
-    console.error('Failed to log usage', error);
-  }
 }
