@@ -79,7 +79,9 @@ const Main: FC = () => {
     stopGeneration,
     setStopGeneration,
     chatMessages,
+    setChatMessages,
     messageDetails,
+    setMessageDetails,
     resetHistory,
   } = useOpenai();
 
@@ -496,8 +498,16 @@ const Main: FC = () => {
 
   const handleLoadButtonClick = useCallback(async () => {
     const chatSessionData = await loadChatSession(inputPrompt);
-    console.log(JSON.stringify(chatSessionData, null, 2));
-  }, [inputPrompt]);
+    if (chatSessionData) {
+      const { messages, memos, supplementaryMessages } = chatSessionData;
+      console.log(memos);
+      setMemos(memos);
+      setSupplementaryMessages(supplementaryMessages);
+      setMessageDetails(messages);
+    } else {
+      console.error('Failed to load chat session data.');
+    }
+  }, [inputPrompt, setChatMessages]);
 
   const handleSaveButtonClick = useCallback(async () => {
     const chatSessionData = createChatSessionData(
@@ -535,10 +545,24 @@ const Main: FC = () => {
     const intervalId = setInterval(() => {
       if (isAutoScrollMode) scrollDown(true);
     }, 500);
+
+    const consoleLogIntervalId = setInterval(() => {
+      console.log('memos', memos);
+      console.log('supplementaryMessages', supplementaryMessages);
+      console.log('highlightedPartInfo', highlightedPartInfo);
+      console.log('chatMessages', chatMessages);
+    }, 5000);
     return () => {
+      clearInterval(consoleLogIntervalId);
       clearInterval(intervalId);
     };
-  }, [isAutoScrollMode, scrollDown]);
+  }, [
+    isAutoScrollMode,
+    scrollDown,
+    memos,
+    supplementaryMessages,
+    chatMessages,
+  ]);
 
   useEffect(() => {
     if (isTemporaryChatOpen && containerRef.current) scrollDown(false);

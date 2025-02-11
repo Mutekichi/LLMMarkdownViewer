@@ -8,7 +8,7 @@ import { useSystemPrompt } from './useSystemPrompt';
 
 const SYSTEM_PROMPT_ROLE = 'user';
 export interface ChatMessage {
-  role: 'user' | 'assistant';
+  role: 'user' | 'assistant' | 'error';
   content: string;
 }
 
@@ -41,6 +41,7 @@ export interface UseOpenaiReturn {
   chatMessages: ChatMessage[];
   setChatMessages: React.Dispatch<React.SetStateAction<ChatMessage[]>>;
   messageDetails: MessageDetail[];
+  setMessageDetails: React.Dispatch<React.SetStateAction<MessageDetail[]>>;
   resetHistory: () => void;
   temporaryStreamResponse: (
     prompt: string,
@@ -284,6 +285,7 @@ export const useOpenai = (): UseOpenaiReturn => {
     chatMessages,
     setChatMessages,
     messageDetails,
+    setMessageDetails,
     resetHistory,
     temporaryStreamResponse,
   };
