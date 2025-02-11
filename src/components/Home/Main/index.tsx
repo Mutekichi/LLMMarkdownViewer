@@ -14,6 +14,11 @@ import {
 import { Tooltip } from '@/components/ui/tooltip';
 import { useContainerRef } from '@/contexts/ContainerRefContext';
 import { MessageDetail, useOpenai } from '@/hooks/useOpenai';
+import {
+  createChatSessionData,
+  loadChatSession,
+  saveChatSession,
+} from '@/lib/storageChatSession';
 import { checkInputLength, excludeSystemMessages } from '@/utils/chatUtils';
 import {
   Box,
@@ -39,7 +44,7 @@ interface HighlightedPartInfo {
   [messageId: string]: HighlightInfo[];
 }
 
-interface Memos {
+export interface Memos {
   [messageId: string]: {
     id: string;
     range: HighlightRange;
@@ -47,17 +52,17 @@ interface Memos {
   }[];
 }
 
-interface SupplementaryMessageEntry {
+export interface SupplementaryMessageEntry {
   id: string;
   range: HighlightRange;
   supplementary: MessageDetail | null;
 }
 
-interface SupplementaryMessages {
+export interface SupplementaryMessages {
   [messageId: string]: SupplementaryMessageEntry[];
 }
 
-interface CurrentSelection {
+export interface CurrentSelection {
   msgId: string;
   id: string;
   startOffset: number;
@@ -489,10 +494,25 @@ const Main: FC = () => {
     [containerRef, isNearBottom],
   );
 
+  const handleLoadButtonClick = useCallback(async () => {
+    const chatSessionData = await loadChatSession(inputPrompt);
+    console.log(JSON.stringify(chatSessionData, null, 2));
+  }, [inputPrompt]);
+
+  const handleSaveButtonClick = useCallback(async () => {
+    const chatSessionData = createChatSessionData(
+      messageDetails,
+      memos,
+      supplementaryMessages,
+    );
+
+    await saveChatSession(chatSessionData);
+  }, [messageDetails, memos, supplementaryMessages]);
+
   useEffect(() => {
     if (shouldStartExplanation) {
       explainStreamResponse(
-        `${textToExplain}について、さらに説明してください。回答は、なるべく「${textToExplain}とは、」に続く形でお願いします。`,
+        `${textToExplain}の部分について、もう少しだけ詳細に説明してください。`,
         OpenaiModelType.GPT4omini,
       );
       setShouldStartExplanation(false);
@@ -515,17 +535,10 @@ const Main: FC = () => {
     const intervalId = setInterval(() => {
       if (isAutoScrollMode) scrollDown(true);
     }, 500);
-
-    const debugIntervalId = setInterval(() => {
-      console.log('supp', supplementaryMessages);
-      console.log('memos', memos);
-    }, 5000);
-
     return () => {
       clearInterval(intervalId);
-      clearInterval(debugIntervalId);
     };
-  }, [isAutoScrollMode, scrollDown, supplementaryMessages, memos]);
+  }, [isAutoScrollMode, scrollDown]);
 
   useEffect(() => {
     if (isTemporaryChatOpen && containerRef.current) scrollDown(false);
@@ -646,6 +659,7 @@ const Main: FC = () => {
             inputDisabled={isLoading}
           />
         </Center>
+
         <MessageSettingPart
           model={model}
           setModel={setModel}
@@ -656,6 +670,8 @@ const Main: FC = () => {
           setIsTemporaryChatOpen={setIsTemporaryChatOpen}
           resetHistory={resetHistory}
           temporaryResetHistory={temporaryResetHistory}
+          onSaveButtonClick={handleSaveButtonClick}
+          onLoadButtonClick={handleLoadButtonClick}
         />
       </VStack>
       <DrawerRoot

@@ -3,6 +3,7 @@ import { Switch } from '@/components/ui/switch';
 import { Tooltip } from '@/components/ui/tooltip';
 import { Box, Button, Flex, HStack, Icon } from '@chakra-ui/react';
 import { Dispatch, FC, memo, SetStateAction, useCallback } from 'react';
+import { CiSaveDown1 } from 'react-icons/ci';
 import { RxTrash } from 'react-icons/rx';
 import {
   OPENAI_MODEL_DISPLAY_NAMES,
@@ -20,6 +21,8 @@ interface MessageSettingPartProps {
   setIsTemporaryChatOpen: (isOpen: boolean) => void;
   resetHistory: () => void;
   temporaryResetHistory: () => void;
+  onSaveButtonClick: () => void;
+  onLoadButtonClick: () => void;
 }
 
 const createModelOptions = (): PopoverSelectOption<OpenaiModelType>[] => {
@@ -40,6 +43,8 @@ export const MessageSettingPart: FC<MessageSettingPartProps> = memo((props) => {
     setIsTemporaryChatOpen,
     resetHistory,
     temporaryResetHistory,
+    onSaveButtonClick,
+    onLoadButtonClick,
   } = props;
 
   const onTemporaryChatButtonClick = useCallback(() => {
@@ -124,6 +129,38 @@ export const MessageSettingPart: FC<MessageSettingPartProps> = memo((props) => {
           <Icon as={RxTrash} boxSize={10} color="blackAlpha.800" />
         </Button>
       </Tooltip>
+      <Button
+        display="flex"
+        h="100%"
+        w="80px"
+        bgColor="transparent"
+        opacity={1}
+        px={2}
+        borderRadius={10}
+        _hover={{ bgColor: 'blackAlpha.50' }}
+        onClick={() => {
+          onSaveButtonClick();
+        }}
+      >
+        {/* <img src="/icons/vanish.svg" alt="SVG" width={60} height={60} /> */}
+        <Icon as={CiSaveDown1} boxSize={10} color="blackAlpha.800" />
+      </Button>
+      <Button
+        display="flex"
+        h="100%"
+        w="80px"
+        bgColor="transparent"
+        opacity={1}
+        px={2}
+        borderRadius={10}
+        _hover={{ bgColor: 'blackAlpha.50' }}
+        onClick={() => {
+          onLoadButtonClick();
+        }}
+      >
+        {/* <img src="/icons/vanish.svg" alt="SVG" width={60} height={60} /> */}
+        <Icon as={CiSaveDown1} boxSize={10} color="blackAlpha.800" />
+      </Button>
     </HStack>
   );
 });

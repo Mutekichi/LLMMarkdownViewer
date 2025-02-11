@@ -6,6 +6,7 @@ import { useCallback, useEffect, useRef, useState } from 'react';
 import { OpenaiModelType } from '../config/llm-models';
 import { useSystemPrompt } from './useSystemPrompt';
 
+const SYSTEM_PROMPT_ROLE = 'user';
 export interface ChatMessage {
   role: 'user' | 'assistant';
   content: string;
@@ -71,11 +72,11 @@ export const useOpenai = (): UseOpenaiReturn => {
       // set system prompt as the initial message
       // NOTE: this should not be seen on the UI
       // role: 'system' cannot be applied to some models, so it is not used
-      setChatMessages([{ role: 'user', content: systemPrompt }]);
+      setChatMessages([{ role: SYSTEM_PROMPT_ROLE, content: systemPrompt }]);
       setMessageDetails([
         {
           id: getNextMessageId(),
-          role: 'user',
+          role: SYSTEM_PROMPT_ROLE,
           content: systemPrompt,
           timestamp: new Date(),
         },
@@ -97,14 +98,14 @@ export const useOpenai = (): UseOpenaiReturn => {
     setOutput('');
     setError(null);
     setChatMessages(
-      systemPrompt ? [{ role: 'user', content: systemPrompt }] : [],
+      systemPrompt ? [{ role: SYSTEM_PROMPT_ROLE, content: systemPrompt }] : [],
     );
     setMessageDetails(
       systemPrompt
         ? [
             {
               id: getNextMessageId(),
-              role: 'user',
+              role: SYSTEM_PROMPT_ROLE,
               content: systemPrompt,
               timestamp: new Date(),
             },
@@ -224,7 +225,7 @@ export const useOpenai = (): UseOpenaiReturn => {
 
         const temporaryMessages = systemPrompt
           ? [
-              { role: 'user', content: systemPrompt },
+              { role: SYSTEM_PROMPT_ROLE, content: systemPrompt },
               { role: 'user', content: prompt },
             ]
           : [{ role: 'user', content: prompt }];
