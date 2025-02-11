@@ -108,55 +108,6 @@ export const useOpenai = (): UseOpenaiReturn => {
               content: systemPrompt,
               timestamp: new Date(),
             },
-            {
-              id: getNextMessageId(),
-              role: 'assistant',
-              content: 'Hello! How can I help you today?',
-              timestamp: new Date(),
-            },
-            //             {
-            //               id: getNextMessageId(),
-            //               role: 'user',
-            //               content: 'ガウス積分について教えてください。',
-            //               timestamp: new Date(),
-            //             },
-            //             {
-            //               id: getNextMessageId(),
-            //               role: 'assistant',
-            //               content: `
-            // ガウス積分は、ガウス関数と呼ばれる指数関数の積分を表します。ガウス関数は、次のように定義されます。
-
-            // $$
-            // f(x) = e^{-x^2}
-            // $$
-
-            // ガウス積分は、以下のように計算できます。
-
-            // $$
-            // \\int_{-\\infty}^{\\infty} e^{-x^2} dx = \\sqrt{\\pi}
-            // $$
-
-            // ガウス積分は、以下のように計算できます。
-
-            // $$
-            // \\int_{-\\infty}^{\\infty} e^{-x^2} dx = \\sqrt{\\pi}
-            // $$
-
-            // ガウス積分は、以下のように計算できます。
-
-            // $$
-            // \\int_{-\\infty}^{\\infty} e^{-x^2} dx = \\sqrt{\\pi}
-            // $$
-
-            // ガウス積分は、以下のように計算できます。
-
-            // $$
-            // \\int_{-\\infty}^{\\infty} e^{-x^2} dx = \\sqrt{\\pi}
-            // $$
-
-            // この積分は、確率論や統計学、物理学などの分野で広く使用されています。`,
-            //     timestamp: new Date(),
-            //   },
           ]
         : [],
     );

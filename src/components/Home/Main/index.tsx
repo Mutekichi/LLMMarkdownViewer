@@ -230,17 +230,43 @@ const Main: FC = () => {
           m.range.startOffset === info.range.startOffset &&
           m.range.endOffset === info.range.endOffset,
       );
-      setCurrentSelection({
-        msgId,
-        id: info.id,
-        startOffset: info.range.startOffset,
-        endOffset: info.range.endOffset,
-      });
-      setActionType('memo');
-      setInputText(memoEntry ? memoEntry.memo : '');
-      setDrawerOpen(true);
+      const supplementaryDetail = supplementaryMessages[msgId]?.find(
+        (entry) =>
+          entry.id === info.id &&
+          entry.range.startOffset === info.range.startOffset &&
+          entry.range.endOffset === info.range.endOffset,
+      );
+      if (memoEntry) {
+        setCurrentSelection({
+          msgId,
+          id: info.id,
+          startOffset: info.range.startOffset,
+          endOffset: info.range.endOffset,
+        });
+        setActionType('memo');
+        setInputText(memoEntry ? memoEntry.memo : '');
+        setDrawerOpen(true);
+      } else if (supplementaryDetail) {
+        setCurrentSelection({
+          msgId,
+          id: info.id,
+          startOffset: info.range.startOffset,
+          endOffset: info.range.endOffset,
+        });
+        setActionType('explain');
+        setInputText('');
+        setDrawerOpen(true);
+      } else {
+        console.log(
+          'No memo or supplementary detail found for this selection.',
+        );
+        setCurrentSelection(null);
+        setActionType(null);
+        setInputText('');
+        setDrawerOpen(false);
+      }
     },
-    [memos],
+    [memos, supplementaryMessages],
   );
 
   const handleDrawerDelete = useCallback(() => {
@@ -368,6 +394,7 @@ const Main: FC = () => {
           startOffset: currentSelection.startOffset,
           endOffset: currentSelection.endOffset,
         };
+
         if (existingIndex >= 0) {
           const existing = currentHighlights[existingIndex];
           const alreadyExists = existing.ranges.some(
@@ -395,11 +422,13 @@ const Main: FC = () => {
           };
         }
       });
+
       setSupplementaryMessages((prev) => {
         const supplementaryDetail =
           explainMessageDetails && explainMessageDetails.length > 0
             ? explainMessageDetails[explainMessageDetails.length - 1]
             : null;
+
         const currentList = prev[currentSelection.msgId] || [];
         const existingIndex = currentList.findIndex(
           (entry) =>
@@ -433,11 +462,12 @@ const Main: FC = () => {
         }
       });
     }
+
     setDrawerOpen(false);
     setCurrentSelection(null);
     setActionType(null);
     setInputText('');
-  }, [currentSelection, actionType, inputText]);
+  }, [currentSelection, actionType, inputText, explainMessageDetails]);
 
   const isNearBottom = useCallback(() => {
     if (containerRef.current) {
@@ -486,10 +516,16 @@ const Main: FC = () => {
       if (isAutoScrollMode) scrollDown(true);
     }, 500);
 
+    const debugIntervalId = setInterval(() => {
+      console.log('supp', supplementaryMessages);
+      console.log('memos', memos);
+    }, 5000);
+
     return () => {
       clearInterval(intervalId);
+      clearInterval(debugIntervalId);
     };
-  }, [isAutoScrollMode, scrollDown]);
+  }, [isAutoScrollMode, scrollDown, supplementaryMessages, memos]);
 
   useEffect(() => {
     if (isTemporaryChatOpen && containerRef.current) scrollDown(false);
