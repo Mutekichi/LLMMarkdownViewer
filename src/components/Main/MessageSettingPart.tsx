@@ -8,8 +8,8 @@ import { RxTrash } from 'react-icons/rx';
 import {
   OPENAI_MODEL_DISPLAY_NAMES,
   OpenaiModelType,
-} from '../../../config/llm-models';
-import { PopoverSelect, PopoverSelectOption } from '../../PopoverSelect';
+} from '../../config/llm-models';
+import { PopoverSelect, PopoverSelectOption } from '../PopoverSelect';
 
 interface MessageSettingPartProps {
   model: string;

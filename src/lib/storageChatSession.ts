@@ -1,5 +1,5 @@
 'use client';
-import { Memos, SupplementaryMessages } from '@/components/Home/Main';
+import { Memos, SupplementaryMessages } from '@/components/Main';
 import { calculateCost, OpenaiModelType } from '@/config/llm-models';
 import { MessageDetail } from '@/hooks/useOpenai';
 

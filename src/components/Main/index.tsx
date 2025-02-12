@@ -33,10 +33,10 @@ import {
 import { FC, useCallback, useEffect, useRef, useState } from 'react';
 import { HiMagnifyingGlass } from 'react-icons/hi2';
 import { LuPencilLine } from 'react-icons/lu';
-import { OpenaiModelType } from '../../../config/llm-models';
-import CustomTextInput from '../../CustomInput';
+import { OpenaiModelType } from '../../config/llm-models';
 import { AnalyticsDialog } from '../AnalyticsDialog';
 import { AppHeader } from '../AppHeader';
+import CustomTextInput from '../CustomInput';
 import { MessageHistory } from '../MessageHistory';
 import { MessageSettingPart } from './MessageSettingPart';
 
@@ -88,11 +88,6 @@ const Main: FC = () => {
   const {
     output: temporaryOutput,
     isLoading: temporaryIsLoading,
-    error: temporaryError,
-    streamResponse: temporaryStreamResponse,
-    stopGeneration: temporaryStopGeneration,
-    setStopGeneration: temporarySetStopGeneration,
-    chatMessages: temporaryChatMessages,
     messageDetails: temporaryMessageDetails,
     resetHistory: temporaryResetHistory,
     temporaryStreamResponse: temporaryTemporaryStreamResponse,
