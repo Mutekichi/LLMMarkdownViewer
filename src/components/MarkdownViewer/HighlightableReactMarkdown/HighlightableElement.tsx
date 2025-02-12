@@ -32,6 +32,7 @@ export type HighlightInfo = {
  * Information needed to display the popover.
  */
 export interface PopoverInfo {
+  text?: string;
   absoluteStart: number;
   absoluteEnd: number;
   anchorRect: DOMRect;
@@ -60,6 +61,7 @@ export interface HighlightableElementProps {
   renderPopover?: (
     info: {
       id: string;
+      text?: string;
       absoluteStart: number;
       absoluteEnd: number;
       anchorRect: DOMRect;
@@ -72,6 +74,120 @@ export interface HighlightableElementProps {
   [key: string]: any;
 }
 
+/**
+ * Takes a text node and splits it into segments based on highlight information
+ * according to the global offset, wrapping each segment in a span element
+ * and returning the result.
+ */
+const wrapText = (
+  text: string,
+  globalStart: number,
+  highlightRanges: HighlightRange[],
+): React.ReactNode[] => {
+  const segments: React.ReactNode[] = [];
+  let localOffset = 0;
+  // Extract relevant highlight ranges for this text node (those that overlap with the global offset)
+  const relevantRanges = highlightRanges.filter(
+    (range) =>
+      range.endOffset > globalStart &&
+      range.startOffset < globalStart + text.length,
+  );
+  relevantRanges.sort((a, b) => a.startOffset - b.startOffset);
+
+  for (const range of relevantRanges) {
+    const segHighlightStart =
+      Math.max(range.startOffset, globalStart) - globalStart;
+    const segHighlightEnd =
+      Math.min(range.endOffset, globalStart + text.length) - globalStart;
+    // Unhighlighted part before the highlighted segment
+    if (localOffset < segHighlightStart) {
+      const unhighlightedText = text.substring(localOffset, segHighlightStart);
+      segments.push(
+        <Box
+          as="span"
+          key={`${globalStart}-${localOffset}-un`}
+          data-offset-start={globalStart + localOffset}
+          data-offset-end={globalStart + segHighlightStart}
+          data-highlighted="false"
+        >
+          {unhighlightedText}
+        </Box>,
+      );
+    }
+    // Highlighted part
+    const highlightedText = text.substring(segHighlightStart, segHighlightEnd);
+    segments.push(
+      <Box
+        as="span"
+        key={`${globalStart}-${segHighlightStart}-hl`}
+        data-offset-start={globalStart + segHighlightStart}
+        data-offset-end={globalStart + segHighlightEnd}
+        data-highlighted="true"
+        color="blue.500"
+        textDecoration="underline"
+        cursor="pointer"
+      >
+        {highlightedText}
+      </Box>,
+    );
+    localOffset = segHighlightEnd;
+  }
+  // Remaining unhighlighted part
+  if (localOffset < text.length) {
+    segments.push(
+      <Box
+        as="span"
+        key={`${globalStart}-${localOffset}-end`}
+        data-offset-start={globalStart + localOffset}
+        data-offset-end={globalStart + text.length}
+        data-highlighted="false"
+      >
+        {text.substring(localOffset)}
+      </Box>,
+    );
+  }
+  return segments;
+};
+
+/**
+ * Recursively traverses the children and applies wrapText to each text node.
+ * currentOffset represents the number of characters processed so far (global offset).
+ */
+const wrapChildren = (
+  children: React.ReactNode,
+  highlightRanges: HighlightRange[],
+  currentOffset: number,
+): { newChildren: React.ReactNode[]; offset: number } => {
+  let newChildren: React.ReactNode[] = [];
+  React.Children.forEach(children, (child) => {
+    if (typeof child === 'string') {
+      // If it's a text node, split and wrap using wrapText
+      const wrapped = wrapText(child, currentOffset, highlightRanges);
+      newChildren.push(...wrapped);
+      currentOffset += child.length;
+    } else if (React.isValidElement(child)) {
+      // If it's a React element, recursively process child elements to create a clone
+      const childProps = child.props;
+      const result = wrapChildren(
+        childProps.children,
+        highlightRanges,
+        currentOffset,
+      );
+      currentOffset = result.offset;
+      newChildren.push(
+        React.cloneElement(child, {
+          ...childProps,
+          children: result.newChildren,
+        }),
+      );
+    } else {
+      // Other elements are added as is
+      newChildren.push(child);
+    }
+  });
+  return { newChildren, offset: currentOffset };
+};
+
 export const HighlightableElement: React.FC<HighlightableElementProps> = ({
   children,
   id,
@@ -83,42 +199,83 @@ export const HighlightableElement: React.FC<HighlightableElementProps> = ({
   ...rest
 }) => {
   const { containerRef } = useContainerRef();
-  // Detect if children is a plain string
-  const isPlainString = typeof children === 'string';
   const [popoverInfo, setPopoverInfo] = React.useState<PopoverInfo | null>(
     null,
   );
   const closePopover = () => setPopoverInfo(null);
 
-  /**
-   * handleMouseUp
-   * Triggered when the user finishes a mouse selection,
-   * detects the highlight range and either calls onHighlightedClick or onSelection/renderPopover.
-   */
+  console.log(highlightInfo);
+
+  const highlightRanges = highlightInfo
+    ? [...highlightInfo.ranges].sort((a, b) => a.startOffset - b.startOffset)
+    : [];
+
+  // process each text node recursively and attach offset information to each text
+  const { newChildren } = wrapChildren(children, highlightRanges, 0);
+
+  const handleClick = (e: React.MouseEvent<HTMLElement>) => {
+    let spanElement = e.target as HTMLElement;
+    while (spanElement && !spanElement.hasAttribute('data-offset-start')) {
+      spanElement = spanElement.parentElement as HTMLElement;
+    }
+    if (!spanElement) return;
+
+    const startOffset = spanElement.getAttribute('data-offset-start');
+    const endOffset = spanElement.getAttribute('data-offset-end');
+
+    if (!startOffset || !endOffset) return;
+
+    const absoluteStart = parseInt(startOffset, 10);
+    const absoluteEnd = parseInt(endOffset, 10);
+
+    if (
+      spanElement.getAttribute('data-highlighted') === 'true' &&
+      onHighlightedClick
+    ) {
+      onHighlightedClick({
+        id,
+        range: { startOffset: absoluteStart, endOffset: absoluteEnd },
+      });
+    }
+  };
+
   const handleMouseUp = (e: React.MouseEvent<HTMLElement>) => {
     const selection = window.getSelection();
     if (!selection || selection.isCollapsed) return;
     const range = selection.getRangeAt(0);
 
-    // For simplicity, only handle cases where the selection is within a single text node
-    if (range.startContainer !== range.endContainer) return;
-    if (range.startContainer.nodeType !== Node.TEXT_NODE) return;
+    if (range.startContainer !== range.endContainer) {
+      console.log('Selection across multiple nodes is not supported.');
+      return;
+    }
+    if (range.startContainer.nodeType !== Node.TEXT_NODE) {
+      console.log(
+        'Selection within non-text nodes is not supported. The selected node type is:',
+        range.startContainer.nodeType,
+      );
+      return;
+    }
 
-    // Retrieve the offset start from data attributes
+    // find the nearest parent span element with data-offset-start attribute
     let spanElement = range.startContainer.parentElement;
     while (spanElement && !spanElement.hasAttribute('data-offset-start')) {
       spanElement = spanElement.parentElement;
     }
-    if (!spanElement) return;
+    if (!spanElement) {
+      console.log('Failed to find the parent span element.');
+      return;
+    }
 
     const dataOffsetStart = spanElement.getAttribute('data-offset-start');
-    if (!dataOffsetStart) return;
-
+    if (!dataOffsetStart) {
+      console.log('Failed to retrieve data-offset-start attribute.');
+      return;
+    }
     const segmentStart = parseInt(dataOffsetStart, 10);
     const absoluteStart = segmentStart + range.startOffset;
     const absoluteEnd = segmentStart + range.endOffset;
 
-    // If it's already highlighted, call onHighlightedClick
+    // already highlighted
     if (spanElement.getAttribute('data-highlighted') === 'true') {
       if (onHighlightedClick) {
         onHighlightedClick({
@@ -130,171 +287,39 @@ export const HighlightableElement: React.FC<HighlightableElementProps> = ({
       return;
     }
 
-    // Otherwise, call renderPopover or onSelection
+    // otherwise, show the popover
     if (renderPopover) {
+      const text = selection.toString();
       const rect = range.getBoundingClientRect();
-      setPopoverInfo({ absoluteStart, absoluteEnd, anchorRect: rect });
+      setPopoverInfo({ absoluteStart, absoluteEnd, text, anchorRect: rect });
     } else if (onSelection) {
-      onSelection({
-        id,
-        startOffset: absoluteStart,
-        endOffset: absoluteEnd,
-      });
+      onSelection({ id, startOffset: absoluteStart, endOffset: absoluteEnd });
     }
     selection.removeAllRanges();
   };
 
-  /**
-   * If children is a plain string, split it into segments based on highlight ranges,
-   * and wrap them with spans containing data attributes for offset tracking.
-   */
-  if (isPlainString) {
-    const originalText = children as string;
-    let segments: Array<{
-      text: string;
-      highlighted: boolean;
-      start: number;
-      end: number;
-    }> = [];
-
-    const ranges = highlightInfo
-      ? [...highlightInfo.ranges].sort((a, b) => a.startOffset - b.startOffset)
-      : [];
-
-    let currentIndex = 0;
-    for (const range of ranges) {
-      if (currentIndex < range.startOffset) {
-        segments.push({
-          text: originalText.substring(currentIndex, range.startOffset),
-          highlighted: false,
-          start: currentIndex,
-          end: range.startOffset,
-        });
-      }
-      segments.push({
-        text: originalText.substring(range.startOffset, range.endOffset),
-        highlighted: true,
-        start: range.startOffset,
-        end: range.endOffset,
-      });
-      currentIndex = range.endOffset;
-    }
-    if (currentIndex < originalText.length) {
-      segments.push({
-        text: originalText.substring(currentIndex),
-        highlighted: false,
-        start: currentIndex,
-        end: originalText.length,
-      });
-    }
-
-    const renderSegment = (
-      seg: { text: string; highlighted: boolean; start: number; end: number },
-      idx: number,
-    ) => {
-      if (seg.highlighted) {
-        return (
-          <Box
-            as="span"
-            key={idx}
-            onClick={() => {
-              if (onHighlightedClick) {
-                onHighlightedClick({
-                  id,
-                  range: { startOffset: seg.start, endOffset: seg.end },
-                });
-              }
-            }}
-            data-offset-start={seg.start}
-            data-offset-end={seg.end}
-            data-highlighted="true"
-            color="red.500"
-          >
-            {seg.text}
-          </Box>
-        );
-      }
-      return (
-        <Box
-          as="span"
-          key={idx}
-          data-offset-start={seg.start}
-          data-offset-end={seg.end}
-          data-highlighted="false"
-        >
-          {seg.text}
-        </Box>
-      );
-    };
-
-    const Element = elementType as any;
-
-    return (
-      <Box>
-        <Box as={Element} onMouseUp={handleMouseUp} data-id={id} {...rest}>
-          {segments.map(renderSegment)}
-        </Box>
-        {popoverInfo && renderPopover && (
-          <Box
-            position="absolute"
-            {...(() => {
-              const offset = {
-                x: 50,
-                y: -20,
-              };
-              const top =
-                containerRef.current?.getBoundingClientRect().top || 0;
-              const scrollY = containerRef.current?.scrollTop || 0;
-              const scrollX = containerRef.current?.scrollLeft || 0;
-              return {
-                top: popoverInfo.anchorRect.bottom + scrollY - top + offset.y,
-                left: popoverInfo.anchorRect.right + scrollX + offset.x,
-              };
-            })()}
-            zIndex={1000}
-          >
-            <PopoverRoot
-              open
-              onOpenChange={closePopover}
-              positioning={{ placement: 'bottom' }}
-            >
-              <PopoverTrigger>
-                <Box position="absolute" width="1px" height="1px" />
-              </PopoverTrigger>
-              <PopoverContent>
-                {renderPopover({ id, ...popoverInfo }, closePopover)}
-              </PopoverContent>
-            </PopoverRoot>
-          </Box>
-        )}
-      </Box>
-    );
-  }
-
-  /**
-   * If children contains complex React elements (not a plain string),
-   * render them directly and use onMouseUp for highlight selection.
-   */
-  const Element = elementType as any;
   return (
     <Box>
-      <Box as={Element} onMouseUp={handleMouseUp} data-id={id} {...rest}>
-        {children}
+      <Box
+        as={elementType as React.ElementType}
+        onMouseUp={handleMouseUp}
+        onClick={handleClick}
+        data-id={id}
+        {...rest}
+      >
+        {newChildren}
       </Box>
       {popoverInfo && renderPopover && (
         <Box
           position="absolute"
           {...(() => {
-            const offset = {
-              x: 100,
-              y: 10,
-            };
+            const offset = { x: 50, y: -20 };
             const top = containerRef.current?.getBoundingClientRect().top || 0;
             const scrollY = containerRef.current?.scrollTop || 0;
             const scrollX = containerRef.current?.scrollLeft || 0;
             return {
-              top: popoverInfo.anchorRect.top + scrollY - top + offset.y,
-              left: popoverInfo.anchorRect.left + scrollX + offset.x,
+              top: popoverInfo.anchorRect.bottom + scrollY - top + offset.y,
+              left: popoverInfo.anchorRect.right + scrollX + offset.x,
             };
           })()}
           zIndex={1000}
@@ -303,11 +328,12 @@ export const HighlightableElement: React.FC<HighlightableElementProps> = ({
             open
             onOpenChange={closePopover}
             positioning={{ placement: 'bottom' }}
+            size="sm"
           >
             <PopoverTrigger>
               <Box position="absolute" width="1px" height="1px" />
             </PopoverTrigger>
-            <PopoverContent>
+            <PopoverContent asChild>
               {renderPopover({ id, ...popoverInfo }, closePopover)}
             </PopoverContent>
           </PopoverRoot>

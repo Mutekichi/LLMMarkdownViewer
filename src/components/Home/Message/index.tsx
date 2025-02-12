@@ -1,3 +1,4 @@
+import { MarkdownViewer } from '@/components/MarkdownViewer';
 import { HighlightableReactMarkdown } from '@/components/MarkdownViewer/HighlightableReactMarkdown';
 import { ChevronDownIcon, ChevronUpIcon } from '@chakra-ui/icons';
 import { Box, Button, Icon } from '@chakra-ui/react';
@@ -8,25 +9,28 @@ interface MessageProps {
   messageId: string;
   bgColor?: string;
   borderColor?: string;
+  hasBorder?: boolean;
   onSelection?: (info: {
     id: string;
     startOffset: number;
     endOffset: number;
   }) => void;
-  renderPopover: (
-    info: {
+  highlight?: {
+    renderPopover: (
+      info: {
+        id: string;
+        absoluteStart: number;
+        absoluteEnd: number;
+        anchorRect: DOMRect;
+      },
+      close: () => void,
+    ) => React.ReactNode;
+    onHighlightedClick: (info: {
       id: string;
-      absoluteStart: number;
-      absoluteEnd: number;
-      anchorRect: DOMRect;
-    },
-    close: () => void,
-  ) => React.ReactNode;
-  onHighlightedClick: (info: {
-    id: string;
-    range: { startOffset: number; endOffset: number };
-  }) => void;
-  highlightedPartInfo: any[];
+      range: { startOffset: number; endOffset: number };
+    }) => void;
+    highlightedPartInfo: any[];
+  };
 }
 
 const MotionBox = motion(Box);
@@ -36,21 +40,20 @@ export const Message: FC<MessageProps> = ({
   bgColor,
   borderColor,
   onSelection,
-  renderPopover,
-  onHighlightedClick,
-  highlightedPartInfo,
+  hasBorder = true,
+  highlight,
 }) => {
   const [isCollapsed, setIsCollapsed] = useState(false);
 
   return (
     <Box
       // position="relative"
-      px={8}
+      px={hasBorder ? 8 : 2}
       pt={2}
       pb={2}
       bg={bgColor}
-      border={borderColor ? `2px solid ${borderColor}` : undefined}
-      borderRadius={20}
+      border={hasBorder && borderColor ? `2px solid ${borderColor}` : undefined}
+      borderRadius={hasBorder ? 20 : undefined}
       // overflow="hidden"
     >
       <Button
@@ -80,12 +83,18 @@ export const Message: FC<MessageProps> = ({
         transition={{ duration: 0.3 }}
         overflow="hidden"
       >
-        <HighlightableReactMarkdown
-          markdown={message}
-          highlightedPartInfo={highlightedPartInfo}
-          renderPopover={(info, close) => renderPopover(info, close)}
-          onHighlightedClick={(info) => onHighlightedClick(info)}
-        />
+        {highlight ? (
+          <HighlightableReactMarkdown
+            markdown={message}
+            highlightedPartInfo={highlight.highlightedPartInfo}
+            renderPopover={(info, close) =>
+              highlight.renderPopover(info, close)
+            }
+            onHighlightedClick={(info) => highlight.onHighlightedClick(info)}
+          />
+        ) : (
+          <MarkdownViewer markdown={message} />
+        )}
       </MotionBox>
     </Box>
   );

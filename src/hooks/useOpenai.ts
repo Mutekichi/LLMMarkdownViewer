@@ -6,8 +6,9 @@ import { useCallback, useEffect, useRef, useState } from 'react';
 import { OpenaiModelType } from '../config/llm-models';
 import { useSystemPrompt } from './useSystemPrompt';
 
+const SYSTEM_PROMPT_ROLE = 'user';
 export interface ChatMessage {
-  role: 'user' | 'assistant';
+  role: 'user' | 'assistant' | 'error';
   content: string;
 }
 
@@ -38,7 +39,9 @@ export interface UseOpenaiReturn {
   stopGeneration: boolean;
   setStopGeneration: (stop: boolean) => void;
   chatMessages: ChatMessage[];
+  setChatMessages: React.Dispatch<React.SetStateAction<ChatMessage[]>>;
   messageDetails: MessageDetail[];
+  setMessageDetails: React.Dispatch<React.SetStateAction<MessageDetail[]>>;
   resetHistory: () => void;
   temporaryStreamResponse: (
     prompt: string,
@@ -64,70 +67,25 @@ export const useOpenai = (): UseOpenaiReturn => {
   }, []);
 
   const { systemPrompt } = useSystemPrompt();
-  const sampleContent = `# Markdown記法サンプル
-
-  めちゃくちゃ長い文章の表示は、どのようになるのでしょうか？確認したいですよね。今、その長い文章がどのように出力されるかのサンプルとして、この文章が生成されています。
-  
-  ## テキストスタイル
-  **太字テキスト**
-  *イタリック*
-  ~~打ち消し線~~
-  \`inline_code.py\`
-  
-  ## リンク
-  [Google](https://www.google.com)
-  
-  ## リスト
-  - 項目1
-    - ネスト項目1-1
-    - ネスト項目1-2
-  
-  ## Math
-  $\\frac{1}{2}$ + $\\frac{1}{3}$ = $\\frac{5}{6}$ のように、数式を記述できます。
-  
-  改行するとこのようになります。
-  
-  $$ E = mc^2 $$
-  
-  
-  ## コードブロック
-  \`\`\`python
-  def hello():
-      print("Hello, World!")
-  \`\`\``;
 
   useEffect(() => {
     const loadSystemPrompt = async () => {
       // set system prompt as the initial message
       // NOTE: this should not be seen on the UI
       // role: 'system' cannot be applied to some models, so it is not used
-      setChatMessages([{ role: 'user', content: systemPrompt }]);
+      setChatMessages([{ role: SYSTEM_PROMPT_ROLE, content: systemPrompt }]);
       setMessageDetails([
         {
           id: getNextMessageId(),
-          role: 'user',
+          role: SYSTEM_PROMPT_ROLE,
           content: systemPrompt,
-          timestamp: new Date(),
-        },
-      ]);
-
-      setChatMessages((prev) => [
-        ...prev,
-        { role: 'assistant', content: sampleContent },
-      ]);
-      setMessageDetails((prev) => [
-        ...prev,
-        {
-          id: getNextMessageId(),
-          role: 'assistant',
-          content: sampleContent,
           timestamp: new Date(),
         },
       ]);
     };
 
     loadSystemPrompt();
-  }, []);
+  }, [systemPrompt]);
 
   const addMessage = useCallback(
     (message?: ChatMessage, detail?: MessageDetail) => {
@@ -141,14 +99,14 @@ export const useOpenai = (): UseOpenaiReturn => {
     setOutput('');
     setError(null);
     setChatMessages(
-      systemPrompt ? [{ role: 'user', content: systemPrompt }] : [],
+      systemPrompt ? [{ role: SYSTEM_PROMPT_ROLE, content: systemPrompt }] : [],
     );
     setMessageDetails(
       systemPrompt
         ? [
             {
               id: getNextMessageId(),
-              role: 'user',
+              role: SYSTEM_PROMPT_ROLE,
               content: systemPrompt,
               timestamp: new Date(),
             },
@@ -216,6 +174,7 @@ export const useOpenai = (): UseOpenaiReturn => {
         );
 
         const messages = [...chatMessages, { role: 'user', content: prompt }];
+        console.log(messages);
         const stream = await createChatStream(messages, model, image);
 
         await processStream(stream, model, (fullResponse, usageDetail) => {
@@ -267,7 +226,7 @@ export const useOpenai = (): UseOpenaiReturn => {
 
         const temporaryMessages = systemPrompt
           ? [
-              { role: 'user', content: systemPrompt },
+              { role: SYSTEM_PROMPT_ROLE, content: systemPrompt },
               { role: 'user', content: prompt },
             ]
           : [{ role: 'user', content: prompt }];
@@ -324,7 +283,9 @@ export const useOpenai = (): UseOpenaiReturn => {
     stopGeneration,
     setStopGeneration,
     chatMessages,
+    setChatMessages,
     messageDetails,
+    setMessageDetails,
     resetHistory,
     temporaryStreamResponse,
   };

@@ -7,13 +7,16 @@ interface MessageHistoryProps {
   messages: MessageDetail[];
   streaming?: boolean;
   streamingMessage?: string;
-  highlightedPartInfo: { [messageId: string]: any };
-  renderPopover: (
-    msgId: string,
-    info: any,
-    close: () => void,
-  ) => React.ReactNode;
-  onHighlightedClick: (msgId: string, info: any) => void;
+  highlight?: {
+    highlightedPartInfo: { [messageId: string]: any };
+    renderPopover: (
+      msgId: string,
+      info: any,
+      close: () => void,
+    ) => React.ReactNode;
+    onHighlightedClick: (msgId: string, info: any) => void;
+  };
+  hasBorder?: boolean;
 }
 
 const colors = {
@@ -35,22 +38,18 @@ interface ResponseProps {
   responseType: 'user' | 'assistant' | 'error';
   response: string;
   cost?: number;
+  hasBorder?: boolean;
   isStreaming?: boolean;
-  highlightedPartInfo: { [messageId: string]: any };
-  renderPopover: (info: any, close: () => void) => React.ReactNode;
-  onHighlightedClick: (info: any) => void;
+  highlight?: {
+    highlightedPartInfo: { [messageId: string]: any };
+    renderPopover: (info: any, close: () => void) => React.ReactNode;
+    onHighlightedClick: (info: any) => void;
+  };
 }
 
 const Response = memo<ResponseProps>((props) => {
-  const {
-    messageId,
-    responseType,
-    response,
-    cost,
-    highlightedPartInfo,
-    renderPopover,
-    onHighlightedClick,
-  } = props;
+  const { messageId, responseType, response, cost, hasBorder, highlight } =
+    props;
 
   return (
     <HStack
@@ -79,9 +78,17 @@ const Response = memo<ResponseProps>((props) => {
               ? colors.assistant.borderColor
               : colors.error.borderColor
           }
-          renderPopover={renderPopover}
-          onHighlightedClick={onHighlightedClick}
-          highlightedPartInfo={highlightedPartInfo[messageId] || []}
+          highlight={
+            highlight && responseType === 'assistant'
+              ? {
+                  renderPopover: highlight.renderPopover,
+                  onHighlightedClick: highlight.onHighlightedClick,
+                  highlightedPartInfo:
+                    highlight.highlightedPartInfo[messageId] || [],
+                }
+              : undefined
+          }
+          hasBorder={hasBorder}
         />
         {cost && Number((cost / 1000000).toFixed(6)).toString()}
       </Box>
@@ -91,16 +98,18 @@ const Response = memo<ResponseProps>((props) => {
 
 const PastMessages = memo<{
   messages: MessageDetail[];
-  highlightedPartInfo: { [messageId: string]: any };
-  renderPopover: (
-    msgId: string,
-    info: any,
-    close: () => void,
-  ) => React.ReactNode;
-  onHighlightedClick: (msgId: string, info: any) => void;
+  highlight?: {
+    highlightedPartInfo: { [messageId: string]: any };
+    renderPopover: (
+      msgId: string,
+      info: any,
+      close: () => void,
+    ) => React.ReactNode;
+    onHighlightedClick: (msgId: string, info: any) => void;
+  };
+  hasBorder?: boolean;
 }>((props) => {
-  const { messages, highlightedPartInfo, renderPopover, onHighlightedClick } =
-    props;
+  const { messages, highlight, hasBorder } = props;
   return (
     <>
       {messages.map((message, index) => (
@@ -119,13 +128,29 @@ const PastMessages = memo<{
               message.outputTokens,
             )
           }
-          highlightedPartInfo={highlightedPartInfo}
-          renderPopover={(info, close) =>
-            renderPopover(message.id.toString(), info, close)
+          highlight={
+            highlight
+              ? {
+                  highlightedPartInfo: highlight.highlightedPartInfo || {},
+                  renderPopover: highlight
+                    ? (info, close) =>
+                        highlight.renderPopover(
+                          message.id.toString(),
+                          info,
+                          close,
+                        )
+                    : () => null,
+                  onHighlightedClick: highlight
+                    ? (info) =>
+                        highlight.onHighlightedClick(
+                          message.id.toString(),
+                          info,
+                        )
+                    : () => null,
+                }
+              : undefined
           }
-          onHighlightedClick={(info) =>
-            onHighlightedClick(message.id.toString(), info)
-          }
+          hasBorder={hasBorder}
         />
       ))}
     </>
@@ -133,32 +158,20 @@ const PastMessages = memo<{
 });
 
 export const MessageHistory: FC<MessageHistoryProps> = (props) => {
-  const {
-    messages,
-    streaming,
-    streamingMessage,
-    highlightedPartInfo,
-    renderPopover,
-    onHighlightedClick,
-  } = props;
+  const { messages, streaming, streamingMessage, highlight, hasBorder } = props;
   return (
-    <VStack align="stretch" p={4} minH="min-content" w="80%">
+    <VStack align="stretch" p={4} minH="min-content" w="100%">
       <PastMessages
         messages={messages}
-        highlightedPartInfo={highlightedPartInfo}
-        renderPopover={renderPopover}
-        onHighlightedClick={onHighlightedClick}
+        highlight={highlight}
+        hasBorder={hasBorder}
       />
       {streaming && (
         <Response
           messageId="streaming"
           responseType="assistant"
           response={streamingMessage || 'Generating...'}
-          highlightedPartInfo={highlightedPartInfo}
-          renderPopover={(info, close) =>
-            renderPopover('streaming', info, close)
-          }
-          onHighlightedClick={(info) => onHighlightedClick('streaming', info)}
+          hasBorder={hasBorder}
         />
       )}
     </VStack>
