@@ -8,6 +8,7 @@ interface ChatSessionData {
 }
 
 interface ChatSessionMessage {
+  id: number;
   role: string;
   content: string;
   model: string;
@@ -41,6 +42,7 @@ export const createChatSessionData = (
   return {
     messages: messages.map((msg) => {
       const messageData: ChatSessionMessage = {
+        id: msg.id,
         role: msg.role,
         content: msg.content,
         model: msg.model || '',
@@ -52,7 +54,6 @@ export const createChatSessionData = (
       };
 
       const messagesMemos = memos[msg.id.toString()];
-      console.log(messagesMemos);
       if (messagesMemos?.length > 0) {
         messageData.memos = messagesMemos.map((memo) => ({
           clientSideId: memo.id,

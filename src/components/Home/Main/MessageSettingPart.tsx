@@ -19,10 +19,10 @@ interface MessageSettingPartProps {
   isLoading: boolean;
   isTemporaryChatOpen: boolean;
   setIsTemporaryChatOpen: (isOpen: boolean) => void;
-  resetHistory: () => void;
   temporaryResetHistory: () => void;
   onSaveButtonClick: () => void;
   onLoadButtonClick: () => void;
+  onResetButtonClick: () => void;
 }
 
 const createModelOptions = (): PopoverSelectOption<OpenaiModelType>[] => {
@@ -41,10 +41,10 @@ export const MessageSettingPart: FC<MessageSettingPartProps> = memo((props) => {
     isLoading,
     isTemporaryChatOpen,
     setIsTemporaryChatOpen,
-    resetHistory,
     temporaryResetHistory,
     onSaveButtonClick,
     onLoadButtonClick,
+    onResetButtonClick,
   } = props;
 
   const onTemporaryChatButtonClick = useCallback(() => {
@@ -117,13 +117,7 @@ export const MessageSettingPart: FC<MessageSettingPartProps> = memo((props) => {
           px={2}
           borderRadius={10}
           _hover={{ bgColor: 'blackAlpha.50' }}
-          onClick={() => {
-            resetHistory();
-            if (isTemporaryChatOpen) {
-              temporaryResetHistory();
-              setIsTemporaryChatOpen(false);
-            }
-          }}
+          onClick={onResetButtonClick}
         >
           {/* <img src="/icons/vanish.svg" alt="SVG" width={60} height={60} /> */}
           <Icon as={RxTrash} boxSize={10} color="blackAlpha.800" />

@@ -4,6 +4,10 @@ import prisma from '@/lib/prisma';
 import type { NextApiRequest, NextApiResponse } from 'next';
 
 interface ChatSessionData {
+  highlightedPartInfo: {
+    id: string;
+    ranges: { startOffset: number; endOffset: number }[];
+  }[];
   messages: ChatSessionMessage[];
 }
 

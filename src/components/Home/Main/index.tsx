@@ -500,14 +500,71 @@ const Main: FC = () => {
     const chatSessionData = await loadChatSession(inputPrompt);
     if (chatSessionData) {
       const { messages, memos, supplementaryMessages } = chatSessionData;
-      console.log(memos);
+
+      // reconstruct the highlightedPartInfo
+      const highlightInfo: HighlightedPartInfo = {};
+      messages.forEach((msg) => {
+        const matchedMemos = memos[msg.id.toString()];
+        if (matchedMemos) {
+          const highlights = matchedMemos.map((m) => ({
+            id: m.id,
+            ranges: [
+              {
+                startOffset: m.range.startOffset,
+                endOffset: m.range.endOffset,
+              },
+            ],
+          }));
+          highlightInfo[msg.id.toString()] = highlights;
+        }
+        const matchedSupplementaryMessages =
+          supplementaryMessages[msg.id.toString()];
+        if (matchedSupplementaryMessages) {
+          const highlights = matchedSupplementaryMessages.map((m) => ({
+            id: m.id,
+            ranges: [
+              {
+                startOffset: m.range.startOffset,
+                endOffset: m.range.endOffset,
+              },
+            ],
+          }));
+          highlightInfo[msg.id.toString()].push(...highlights);
+        }
+        // sort the highlights by startOffset
+        highlightInfo[msg.id.toString()].sort(
+          (a, b) => a.ranges[0].startOffset - b.ranges[0].startOffset,
+        );
+      });
+      setHighlightedPartInfo(highlightInfo);
+
+      // reconstruct the chat messages
+      const chatMessages = messages.map((msg) => ({
+        role: msg.role,
+        content: msg.content,
+        model: msg.model,
+        timestamp: new Date(msg.timestamp),
+      }));
+      setChatMessages(chatMessages);
+
       setMemos(memos);
       setSupplementaryMessages(supplementaryMessages);
       setMessageDetails(messages);
     } else {
       console.error('Failed to load chat session data.');
     }
-  }, [inputPrompt, setChatMessages]);
+  }, [inputPrompt, setChatMessages, setMessageDetails]);
+
+  const handleResetButtonClick = useCallback(() => {
+    resetHistory();
+    if (isTemporaryChatOpen) {
+      temporaryResetHistory();
+      setIsTemporaryChatOpen(false);
+    }
+    setMemos({});
+    setSupplementaryMessages({});
+    setHighlightedPartInfo({});
+  }, [resetHistory, isTemporaryChatOpen, temporaryResetHistory]);
 
   const handleSaveButtonClick = useCallback(async () => {
     const chatSessionData = createChatSessionData(
@@ -692,10 +749,10 @@ const Main: FC = () => {
           isLoading={isLoading}
           isTemporaryChatOpen={isTemporaryChatOpen}
           setIsTemporaryChatOpen={setIsTemporaryChatOpen}
-          resetHistory={resetHistory}
           temporaryResetHistory={temporaryResetHistory}
           onSaveButtonClick={handleSaveButtonClick}
           onLoadButtonClick={handleLoadButtonClick}
+          onResetButtonClick={handleResetButtonClick}
         />
       </VStack>
       <DrawerRoot
