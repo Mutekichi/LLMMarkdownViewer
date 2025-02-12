@@ -108,6 +108,7 @@ const Main: FC = () => {
     chatMessages: explainChatMessages,
     setChatMessages: explainSetChatMessages,
     messageDetails: explainMessageDetails,
+    setMessageDetails: explainSetMessageDetails,
     resetHistory: explainResetHistory,
   } = useOpenai();
 
@@ -213,8 +214,10 @@ const Main: FC = () => {
                       : info.text
                     : '',
                 );
+                explainResetHistory();
                 setDrawerOpen(true);
                 close();
+                // TODO: should not include messages after the selected message
                 explainSetChatMessages([...chatMessages]);
                 setTextToExplain(info.text || '');
                 setShouldStartExplanation(true);
@@ -244,6 +247,7 @@ const Main: FC = () => {
           entry.range.endOffset === info.range.endOffset,
       );
       if (memoEntry) {
+        console.log('Memo entry found for this selection.');
         setCurrentSelection({
           msgId,
           id: info.id,
@@ -254,12 +258,34 @@ const Main: FC = () => {
         setInputText(memoEntry ? memoEntry.memo : '');
         setDrawerOpen(true);
       } else if (supplementaryDetail) {
+        console.log('Supplementary detail found for this selection.');
         setCurrentSelection({
           msgId,
           id: info.id,
           startOffset: info.range.startOffset,
           endOffset: info.range.endOffset,
         });
+        // the first two messages should be the system prompt and the background message
+        // for the explanation
+        // currently dummy messages are added to the beginning of the explainMessageDetails
+        // because they are not shown in the MessageHistory component
+        explainSetMessageDetails([
+          {
+            id: NaN,
+            role: 'user',
+            content: '',
+            model: model,
+            timestamp: new Date(),
+          },
+          {
+            id: NaN,
+            role: 'user',
+            content: '',
+            model: model,
+            timestamp: new Date(),
+          },
+          supplementaryDetail.supplementary!,
+        ]);
         setActionType('explain');
         setInputText('');
         setDrawerOpen(true);
@@ -273,7 +299,7 @@ const Main: FC = () => {
         setDrawerOpen(false);
       }
     },
-    [memos, supplementaryMessages],
+    [memos, supplementaryMessages, model],
   );
 
   const handleDrawerDelete = useCallback(() => {
@@ -380,6 +406,7 @@ const Main: FC = () => {
           const updated = { ...currentMemos[idx], memo: inputText };
           const newMemos = [...currentMemos];
           newMemos[idx] = updated;
+          newMemos.sort((a, b) => a.range.startOffset - b.range.startOffset);
           return { ...prev, [msgId]: newMemos };
         } else {
           return {
@@ -504,6 +531,7 @@ const Main: FC = () => {
       // reconstruct the highlightedPartInfo
       const highlightInfo: HighlightedPartInfo = {};
       messages.forEach((msg) => {
+        console.log('msg', msg);
         const matchedMemos = memos[msg.id.toString()];
         if (matchedMemos) {
           const highlights = matchedMemos.map((m) => ({
@@ -608,6 +636,7 @@ const Main: FC = () => {
       console.log('supplementaryMessages', supplementaryMessages);
       console.log('highlightedPartInfo', highlightedPartInfo);
       console.log('chatMessages', chatMessages);
+      console.log('messageDetails', messageDetails);
     }, 5000);
     return () => {
       clearInterval(consoleLogIntervalId);
@@ -619,6 +648,9 @@ const Main: FC = () => {
     memos,
     supplementaryMessages,
     chatMessages,
+    messageDetails,
+    highlightedPartInfo,
+    setMemos,
   ]);
 
   useEffect(() => {

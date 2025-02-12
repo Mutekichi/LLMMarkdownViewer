@@ -126,8 +126,8 @@ export const loadChatSession = async (
   const memos: Memos = {};
   const supplementaryMessages: SupplementaryMessages = {};
 
-  data.messages.forEach((msg, index) => {
-    const messageId = index;
+  data.messages.forEach((msg) => {
+    const messageId = msg.id;
     messages.push({
       id: messageId,
       role: msg.role as 'user' | 'assistant' | 'error',
@@ -139,7 +139,7 @@ export const loadChatSession = async (
     if (!msg.memos) {
       msg.memos = [];
     }
-    memos[messageId.toString()] = msg.memos.map((memo) => ({
+    memos[messageId] = msg.memos.map((memo) => ({
       id: memo.clientSideId,
       range: { startOffset: memo.rangeStart, endOffset: memo.rangeEnd },
       memo: memo.memo,
@@ -149,24 +149,22 @@ export const loadChatSession = async (
       msg.supplementaryMessages = [];
     }
 
-    supplementaryMessages[messageId.toString()] = msg.supplementaryMessages.map(
-      (sup) => ({
-        id: sup.clientSideId,
-        range: { startOffset: sup.rangeStart, endOffset: sup.rangeEnd },
-        supplementary:
-          sup.items && sup.items.length > 0
-            ? {
-                id: Number(sup.clientSideId),
-                role: sup.items[0].role as 'user' | 'assistant' | 'error',
-                content: sup.items[0].content,
-                model: sup.items[0].model
-                  ? (sup.items[0].model as OpenaiModelType)
-                  : undefined,
-                timestamp: new Date(sup.items[0].timestamp),
-              }
-            : null,
-      }),
-    );
+    supplementaryMessages[messageId] = msg.supplementaryMessages.map((sup) => ({
+      id: sup.clientSideId,
+      range: { startOffset: sup.rangeStart, endOffset: sup.rangeEnd },
+      supplementary:
+        sup.items && sup.items.length > 0
+          ? {
+              id: Number(sup.clientSideId),
+              role: sup.items[0].role as 'user' | 'assistant' | 'error',
+              content: sup.items[0].content,
+              model: sup.items[0].model
+                ? (sup.items[0].model as OpenaiModelType)
+                : undefined,
+              timestamp: new Date(sup.items[0].timestamp),
+            }
+          : null,
+    }));
   });
 
   return { messages, memos, supplementaryMessages };

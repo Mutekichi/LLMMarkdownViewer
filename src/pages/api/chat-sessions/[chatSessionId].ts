@@ -4,14 +4,11 @@ import prisma from '@/lib/prisma';
 import type { NextApiRequest, NextApiResponse } from 'next';
 
 interface ChatSessionData {
-  highlightedPartInfo: {
-    id: string;
-    ranges: { startOffset: number; endOffset: number }[];
-  }[];
   messages: ChatSessionMessage[];
 }
 
 interface ChatSessionMessage {
+  id: number;
   role: string;
   content: string;
   model: string;
@@ -77,6 +74,7 @@ export default async function handler(
 
       const chatSessionData: ChatSessionData = {
         messages: session.messages.map((msg) => ({
+          id: msg.id,
           role: msg.role,
           content: msg.content,
           model: msg.model,

@@ -204,6 +204,8 @@ export const HighlightableElement: React.FC<HighlightableElementProps> = ({
   );
   const closePopover = () => setPopoverInfo(null);
 
+  console.log(highlightInfo);
+
   const highlightRanges = highlightInfo
     ? [...highlightInfo.ranges].sort((a, b) => a.startOffset - b.startOffset)
     : [];
