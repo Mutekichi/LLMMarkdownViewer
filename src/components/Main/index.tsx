@@ -38,7 +38,7 @@ import { AnalyticsDialog } from '../AnalyticsDialog';
 import { AppHeader } from '../AppHeader';
 import CustomTextInput from '../CustomInput';
 import { MessageHistory } from '../MessageHistory';
-import { MessageSettingPart } from './MessageSettingPart';
+import { MessageSettingPart } from '../MessageSettingPart/MessageSettingPart';
 
 interface HighlightedPartInfo {
   [messageId: string]: HighlightInfo[];
