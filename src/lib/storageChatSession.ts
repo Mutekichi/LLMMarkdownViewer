@@ -53,44 +53,65 @@ export const createChatSessionData = (
             : 0.0,
       };
 
-      const messagesMemos = memos[msg.id.toString()];
-      if (messagesMemos?.length > 0) {
-        messageData.memos = messagesMemos.map((memo) => ({
-          clientSideId: memo.id,
-          rangeStart: memo.range.startOffset,
-          rangeEnd: memo.range.endOffset,
-          memo: memo.memo,
-        }));
+      if (memos[msg.id.toString()]) {
+        const messagesMemos = Object.entries(memos[msg.id.toString()]).flatMap(
+          ([partId, memoEntries]) =>
+            memoEntries.map(({ range, memo }) => ({
+              partId,
+              range,
+              memo,
+            })),
+        );
+
+        if (messagesMemos?.length > 0) {
+          messageData.memos = messagesMemos.map((memo) => ({
+            clientSideId: memo.partId,
+            rangeStart: memo.range.startOffset,
+            rangeEnd: memo.range.endOffset,
+            memo: memo.memo,
+          }));
+        }
       }
 
-      const messagesSupplementaryMessages =
-        supplementaryMessages[msg.id.toString()];
-      if (messagesSupplementaryMessages?.length > 0) {
-        messageData.supplementaryMessages = messagesSupplementaryMessages
-          .filter((entry) => entry.supplementary !== null)
-          .map((entry) => ({
-            clientSideId: entry.id,
-            rangeStart: entry.range.startOffset,
-            rangeEnd: entry.range.endOffset,
-            items: [
-              {
-                role: entry.supplementary!.role,
-                content: entry.supplementary!.content,
-                model: entry.supplementary!.model || '',
-                timestamp: entry.supplementary!.timestamp.toISOString(),
-                cost:
-                  entry.supplementary!.model &&
-                  entry.supplementary!.inputTokens &&
-                  entry.supplementary!.outputTokens
-                    ? calculateCost(
-                        entry.supplementary!.model,
-                        entry.supplementary!.inputTokens,
-                        entry.supplementary!.outputTokens,
-                      )
-                    : 0.0,
-              },
-            ],
-          }));
+      if (supplementaryMessages[msg.id.toString()]) {
+        const messagesSupplementaryMessages = Object.entries(
+          supplementaryMessages[msg.id.toString()],
+        ).flatMap(([partId, supplementaryEntries]) =>
+          supplementaryEntries.map(({ range, supplementary }) => ({
+            partId,
+            range,
+            // currently only one item in the array
+            supplementary: supplementary[2],
+          })),
+        );
+
+        if (messagesSupplementaryMessages?.length > 0) {
+          messageData.supplementaryMessages = messagesSupplementaryMessages
+            .filter((entry) => entry.supplementary !== null)
+            .map((entry) => ({
+              clientSideId: entry.partId,
+              rangeStart: entry.range.startOffset,
+              rangeEnd: entry.range.endOffset,
+              items: [
+                {
+                  role: entry.supplementary!.role,
+                  content: entry.supplementary!.content,
+                  model: entry.supplementary!.model || '',
+                  timestamp: entry.supplementary!.timestamp.toISOString(),
+                  cost:
+                    entry.supplementary!.model &&
+                    entry.supplementary!.inputTokens &&
+                    entry.supplementary!.outputTokens
+                      ? calculateCost(
+                          entry.supplementary!.model,
+                          entry.supplementary!.inputTokens,
+                          entry.supplementary!.outputTokens,
+                        )
+                      : 0.0,
+                },
+              ],
+            }));
+        }
       }
       return messageData;
     }),
@@ -136,35 +157,80 @@ export const loadChatSession = async (
       timestamp: new Date(msg.timestamp),
     });
 
-    if (!msg.memos) {
-      msg.memos = [];
-    }
-    memos[messageId] = msg.memos.map((memo) => ({
-      id: memo.clientSideId,
-      range: { startOffset: memo.rangeStart, endOffset: memo.rangeEnd },
-      memo: memo.memo,
-    }));
+    const memosInMessage = msg.memos;
 
-    if (!msg.supplementaryMessages) {
-      msg.supplementaryMessages = [];
+    if (memosInMessage) {
+      const newMemos: Memos = {};
+      for (const memo of memosInMessage) {
+        if (!newMemos[messageId]) {
+          newMemos[messageId] = {};
+        }
+        if (!newMemos[messageId][memo.clientSideId]) {
+          newMemos[messageId][memo.clientSideId] = [];
+        }
+        newMemos[messageId][memo.clientSideId].push({
+          range: { startOffset: memo.rangeStart, endOffset: memo.rangeEnd },
+          memo: memo.memo,
+        });
+      }
+
+      memos[messageId] = newMemos[messageId];
     }
 
-    supplementaryMessages[messageId] = msg.supplementaryMessages.map((sup) => ({
-      id: sup.clientSideId,
-      range: { startOffset: sup.rangeStart, endOffset: sup.rangeEnd },
-      supplementary:
-        sup.items && sup.items.length > 0
-          ? {
-              id: Number(sup.clientSideId),
-              role: sup.items[0].role as 'user' | 'assistant' | 'error',
-              content: sup.items[0].content,
-              model: sup.items[0].model
-                ? (sup.items[0].model as OpenaiModelType)
-                : undefined,
-              timestamp: new Date(sup.items[0].timestamp),
-            }
-          : null,
-    }));
+    const supplementaryMessagesInMessage = msg.supplementaryMessages;
+
+    if (supplementaryMessagesInMessage) {
+      const newSupplementaryMessages: SupplementaryMessages = {};
+      for (const supplementaryMessage of supplementaryMessagesInMessage) {
+        if (!newSupplementaryMessages[messageId]) {
+          newSupplementaryMessages[messageId] = {};
+        }
+        if (
+          !newSupplementaryMessages[messageId][
+            supplementaryMessage.clientSideId
+          ]
+        ) {
+          newSupplementaryMessages[messageId][
+            supplementaryMessage.clientSideId
+          ] = [];
+        }
+        newSupplementaryMessages[messageId][
+          supplementaryMessage.clientSideId
+        ].push({
+          range: {
+            startOffset: supplementaryMessage.rangeStart,
+            endOffset: supplementaryMessage.rangeEnd,
+          },
+          supplementary: [
+            // currently add dummy data for the first two items
+            // they are not shown in the UI
+            {
+              id: NaN,
+              role: 'error',
+              content: '',
+              model: undefined,
+              timestamp: new Date(),
+            },
+            {
+              id: NaN,
+              role: 'error',
+              content: '',
+              model: undefined,
+              timestamp: new Date(),
+            },
+            supplementaryMessage.items.map((item) => ({
+              id: NaN,
+              role: item.role as 'user' | 'assistant' | 'error',
+              content: item.content,
+              model: item.model ? (item.model as OpenaiModelType) : undefined,
+              timestamp: new Date(item.timestamp),
+            }))[0],
+          ],
+        });
+      }
+
+      supplementaryMessages[messageId] = newSupplementaryMessages[messageId];
+    }
   });
 
   return { messages, memos, supplementaryMessages };
