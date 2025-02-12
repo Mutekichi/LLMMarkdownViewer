@@ -7,8 +7,12 @@ import rehypeKatex from 'rehype-katex';
 import remarkGfm from 'remark-gfm';
 import remarkMath from 'remark-math';
 import { CodeBlock } from '../CodeBlock';
-import { HighlightableElement } from './HighlightableElement';
+import {
+  HighlightableElement,
+  RenderPopoverInfo,
+} from './HighlightableElement';
 // import this to prevent double display for formula
+import { HighlightedParts } from '@/components/Main';
 import 'katex/dist/katex.min.css';
 
 // Inline styled components
@@ -45,40 +49,32 @@ interface HighlightRange {
   endOffset: number;
 }
 
-export type HighlightInfo = {
-  id: string;
-  ranges: HighlightRange[];
-};
-
 export interface HighlightableReactMarkdownProps {
   markdown: string;
-  highlightedPartInfo: HighlightInfo[];
+  highlightedParts: HighlightedParts;
   onSelection?: (info: {
-    id: string;
+    partId: string;
     startOffset: number;
     endOffset: number;
   }) => void;
   renderPopover?: (
-    info: {
-      id: string;
-      absoluteStart: number;
-      absoluteEnd: number;
-      anchorRect: DOMRect;
-    },
+    info: RenderPopoverInfo,
     close: () => void,
   ) => React.ReactNode;
-  onHighlightedClick?: (info: { id: string; range: HighlightRange }) => void;
+  onHighlightedClick?: (partsId: string, range: HighlightRange) => void;
 }
 
 export const HighlightableReactMarkdown: React.FC<
   HighlightableReactMarkdownProps
-> = ({
-  markdown,
-  highlightedPartInfo,
-  onSelection,
-  renderPopover,
-  onHighlightedClick,
-}) => {
+> = (props) => {
+  const {
+    markdown,
+    highlightedParts: highlightedParts,
+    onSelection,
+    renderPopover,
+    onHighlightedClick,
+  } = props;
+
   return (
     <Box>
       <Global
@@ -97,19 +93,19 @@ export const HighlightableReactMarkdown: React.FC<
           // Paragraph
           p: (props: any) => {
             // Generate a unique ID from node position (fallback to a random string if not available)
-            const id = props.node?.position
+            const partId = props.node?.position
               ? `${props.node.position.start.line}-${props.node.position.start.column}`
-              : Math.random().toString(36).substr(2, 9);
+              : 9999;
 
-            const hi = highlightedPartInfo.find((item) => item.id === id);
+            const hi = highlightedParts[partId] || [];
 
             return (
               <HighlightableElement
-                id={id}
+                partId={partId}
                 onSelection={onSelection}
                 renderPopover={renderPopover}
                 onHighlightedClick={onHighlightedClick}
-                highlightInfo={hi}
+                highlightRanges={hi}
                 elementType="p"
                 marginY={2}
                 {...props}
@@ -120,19 +116,19 @@ export const HighlightableReactMarkdown: React.FC<
           },
 
           h1: (props: any) => {
-            const id = props.node?.position
+            const partId = props.node?.position
               ? `h1-${props.node.position.start.line}-${props.node.position.start.column}`
-              : Math.random().toString(36).substr(2, 9);
+              : 9999;
 
-            const hi = highlightedPartInfo.find((item) => item.id === id);
+            const hi = highlightedParts[partId] || [];
 
             return (
               <HighlightableElement
-                id={id}
+                partId={partId}
                 onSelection={onSelection}
                 renderPopover={renderPopover}
                 onHighlightedClick={onHighlightedClick}
-                highlightInfo={hi}
+                highlightRanges={hi}
                 elementType="h1"
                 fontSize="xx-large"
                 fontWeight="bold"
@@ -145,19 +141,19 @@ export const HighlightableReactMarkdown: React.FC<
           },
 
           h2: (props: any) => {
-            const id = props.node?.position
+            const partId = props.node?.position
               ? `h1-${props.node.position.start.line}-${props.node.position.start.column}`
-              : Math.random().toString(36).substr(2, 9);
+              : 9999;
 
-            const hi = highlightedPartInfo.find((item) => item.id === id);
+            const hi = highlightedParts[partId] || [];
 
             return (
               <HighlightableElement
-                id={id}
+                partId={partId}
                 onSelection={onSelection}
                 renderPopover={renderPopover}
                 onHighlightedClick={onHighlightedClick}
-                highlightInfo={hi}
+                highlightRanges={hi}
                 elementType="h2"
                 fontSize="x-large"
                 fontWeight="bold"
@@ -169,19 +165,19 @@ export const HighlightableReactMarkdown: React.FC<
             );
           },
           h3: (props: any) => {
-            const id = props.node?.position
+            const partId = props.node?.position
               ? `h1-${props.node.position.start.line}-${props.node.position.start.column}`
-              : Math.random().toString(36).substr(2, 9);
+              : 9999;
 
-            const hi = highlightedPartInfo.find((item) => item.id === id);
+            const hi = highlightedParts[partId] || [];
 
             return (
               <HighlightableElement
-                id={id}
+                partId={partId}
                 onSelection={onSelection}
                 renderPopover={renderPopover}
                 onHighlightedClick={onHighlightedClick}
-                highlightInfo={hi}
+                highlightRanges={hi}
                 elementType="h3"
                 fontSize="large"
                 fontWeight="bold"
@@ -194,19 +190,19 @@ export const HighlightableReactMarkdown: React.FC<
           },
 
           li: (props: any) => {
-            const id = props.node?.position
+            const partId = props.node?.position
               ? `li-${props.node.position.start.line}-${props.node.position.start.column}`
-              : Math.random().toString(36).substr(2, 9);
+              : 9999;
 
-            const hi = highlightedPartInfo.find((item) => item.id === id);
+            const hi = highlightedParts[partId] || [];
 
             return (
               <HighlightableElement
-                id={id}
+                partId={partId}
                 onSelection={onSelection}
                 renderPopover={renderPopover}
                 onHighlightedClick={onHighlightedClick}
-                highlightInfo={hi}
+                highlightRanges={hi}
                 elementType="li"
                 marginY={1}
                 {...props}
@@ -217,17 +213,17 @@ export const HighlightableReactMarkdown: React.FC<
           },
           //TODO: make list items highlightable
           ul: (props: any) => {
-            const id = props.node?.position
+            const partId = props.node?.position
               ? `ul-${props.node.position.start.line}-${props.node.position.start.column}`
-              : Math.random().toString(36).substr(2, 9);
-            const hi = highlightedPartInfo.find((item) => item.id === id);
+              : 9999;
+            const hi = highlightedParts[partId] || [];
             return (
               <HighlightableElement
-                id={id}
+                partId={partId}
                 onSelection={onSelection}
                 renderPopover={renderPopover}
                 onHighlightedClick={onHighlightedClick}
-                highlightInfo={hi}
+                highlightRanges={hi}
                 elementType="ul"
                 {...props}
               >
@@ -236,17 +232,17 @@ export const HighlightableReactMarkdown: React.FC<
             );
           },
           ol: (props: any) => {
-            const id = props.node?.position
+            const partId = props.node?.position
               ? `ol-${props.node.position.start.line}-${props.node.position.start.column}`
-              : Math.random().toString(36).substr(2, 9);
-            const hi = highlightedPartInfo.find((item) => item.id === id);
+              : 9999;
+            const hi = highlightedParts[partId] || [];
             return (
               <HighlightableElement
-                id={id}
+                partId={partId}
                 onSelection={onSelection}
                 renderPopover={renderPopover}
                 onHighlightedClick={onHighlightedClick}
-                highlightInfo={hi}
+                highlightRanges={hi}
                 elementType="ol"
                 {...props}
               >

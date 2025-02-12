@@ -4,6 +4,8 @@ import { ChevronDownIcon, ChevronUpIcon } from '@chakra-ui/icons';
 import { Box, Button, Icon } from '@chakra-ui/react';
 import { motion } from 'framer-motion';
 import { FC, useState } from 'react';
+import { HighlightedParts } from '../Main';
+import { HighlightRange } from '../MarkdownViewer/HighlightableReactMarkdown/HighlightableElement';
 interface MessageProps {
   message: string;
   messageId: string;
@@ -18,31 +20,24 @@ interface MessageProps {
   highlight?: {
     renderPopover: (
       info: {
-        id: string;
+        partId: string;
+        text?: string;
         absoluteStart: number;
         absoluteEnd: number;
         anchorRect: DOMRect;
       },
       close: () => void,
     ) => React.ReactNode;
-    onHighlightedClick: (info: {
-      id: string;
-      range: { startOffset: number; endOffset: number };
-    }) => void;
-    highlightedPartInfo: any[];
+    onHighlightedClick: (partsId: string, range: HighlightRange) => void;
+    highlightedParts: HighlightedParts;
   };
 }
 
 const MotionBox = motion(Box);
 
-export const Message: FC<MessageProps> = ({
-  message,
-  bgColor,
-  borderColor,
-  onSelection,
-  hasBorder = true,
-  highlight,
-}) => {
+export const Message: FC<MessageProps> = (props) => {
+  const { message, bgColor, borderColor, hasBorder, highlight } = props;
+
   const [isCollapsed, setIsCollapsed] = useState(false);
 
   return (
@@ -86,11 +81,11 @@ export const Message: FC<MessageProps> = ({
         {highlight ? (
           <HighlightableReactMarkdown
             markdown={message}
-            highlightedPartInfo={highlight.highlightedPartInfo}
+            highlightedParts={highlight.highlightedParts}
             renderPopover={(info, close) =>
               highlight.renderPopover(info, close)
             }
-            onHighlightedClick={(info) => highlight.onHighlightedClick(info)}
+            onHighlightedClick={highlight.onHighlightedClick}
           />
         ) : (
           <MarkdownViewer markdown={message} />
