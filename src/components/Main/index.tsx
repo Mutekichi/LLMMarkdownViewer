@@ -1,8 +1,5 @@
 'use client';
-import {
-  HighlightInfo,
-  HighlightRange,
-} from '@/components/MarkdownViewer/HighlightableReactMarkdown/HighlightableElement';
+import { HighlightRange } from '@/components/MarkdownViewer/HighlightableReactMarkdown/HighlightableElement';
 import { DialogRoot } from '@/components/ui/dialog';
 import {
   DrawerBody,
@@ -33,38 +30,43 @@ import {
 import { FC, useCallback, useEffect, useRef, useState } from 'react';
 import { HiMagnifyingGlass } from 'react-icons/hi2';
 import { LuPencilLine } from 'react-icons/lu';
-import { OpenaiModelType } from '../../../config/llm-models';
-import CustomTextInput from '../../CustomInput';
+import { OpenaiModelType } from '../../config/llm-models';
 import { AnalyticsDialog } from '../AnalyticsDialog';
 import { AppHeader } from '../AppHeader';
+import CustomTextInput from '../CustomInput';
 import { MessageHistory } from '../MessageHistory';
-import { MessageSettingPart } from './MessageSettingPart';
+import { MessageSettingPart } from '../MessageSettingPart/MessageSettingPart';
 
-interface HighlightedPartInfo {
-  [messageId: string]: HighlightInfo[];
+export interface HighlightedParts {
+  [partId: string]: HighlightRange[];
 }
-
+export interface HighlightedPartInfo {
+  [messageId: string]: HighlightedParts;
+}
+export interface MemoEntry {
+  range: HighlightRange;
+  memo: string;
+}
 export interface Memos {
   [messageId: string]: {
-    id: string;
-    range: HighlightRange;
-    memo: string;
-  }[];
+    [partId: string]: MemoEntry[];
+  };
 }
 
 export interface SupplementaryMessageEntry {
-  id: string;
   range: HighlightRange;
-  supplementary: MessageDetail | null;
+  supplementary: MessageDetail[];
 }
 
 export interface SupplementaryMessages {
-  [messageId: string]: SupplementaryMessageEntry[];
+  [messageId: string]: {
+    [partId: string]: SupplementaryMessageEntry[];
+  };
 }
 
 export interface CurrentSelection {
   msgId: string;
-  id: string;
+  partId: string;
   startOffset: number;
   endOffset: number;
   text?: string;
@@ -88,11 +90,6 @@ const Main: FC = () => {
   const {
     output: temporaryOutput,
     isLoading: temporaryIsLoading,
-    error: temporaryError,
-    streamResponse: temporaryStreamResponse,
-    stopGeneration: temporaryStopGeneration,
-    setStopGeneration: temporarySetStopGeneration,
-    chatMessages: temporaryChatMessages,
     messageDetails: temporaryMessageDetails,
     resetHistory: temporaryResetHistory,
     temporaryStreamResponse: temporaryTemporaryStreamResponse,
@@ -116,7 +113,9 @@ const Main: FC = () => {
   const textareaRef = useRef<HTMLTextAreaElement>(null);
 
   const [inputPrompt, setInputPrompt] = useState('');
-  const [model, setModel] = useState<OpenaiModelType>(OpenaiModelType.o1mini);
+  const [model, setModel] = useState<OpenaiModelType>(
+    OpenaiModelType.GPT4omini,
+  );
 
   const [isModelSelectPopoverOpen, setIsModelSelectPopoverOpen] =
     useState(false);
@@ -142,7 +141,7 @@ const Main: FC = () => {
     (
       msgId: string,
       info: {
-        id: string;
+        partId: string;
         text?: string;
         absoluteStart: number;
         absoluteEnd: number;
@@ -171,7 +170,7 @@ const Main: FC = () => {
               onClick={() => {
                 setCurrentSelection({
                   msgId,
-                  id: info.id,
+                  partId: info.partId,
                   startOffset: info.absoluteStart,
                   endOffset: info.absoluteEnd,
                 });
@@ -202,7 +201,7 @@ const Main: FC = () => {
               onClick={() => {
                 setCurrentSelection({
                   msgId,
-                  id: info.id,
+                  partId: info.partId,
                   startOffset: info.absoluteStart,
                   endOffset: info.absoluteEnd,
                 });
@@ -232,27 +231,67 @@ const Main: FC = () => {
     [chatMessages],
   );
 
+  const addHighlightRange = useCallback(
+    (msgId: string, partId: string, range: HighlightRange) => {
+      setHighlightedPartInfo((prev) => {
+        const rangeToAppend: HighlightRange = { ...range };
+
+        const oldRanges = prev[msgId]?.[partId] || [];
+        const newRanges = [...oldRanges, rangeToAppend];
+        return {
+          ...prev,
+          [msgId]: { ...prev[msgId], [partId]: newRanges },
+        };
+      });
+    },
+    [setHighlightedPartInfo],
+  );
+
+  const removeHighlightRange = useCallback(
+    (msgId: string, partId: string, range: HighlightRange) => {
+      setHighlightedPartInfo((prev) => {
+        const currentHighlightRanges = prev[msgId]?.[partId];
+        // drop the range that is the same as the current selection
+        const newHighlightRanges = currentHighlightRanges.filter(
+          (r) =>
+            !(
+              r.startOffset === range.startOffset &&
+              r.endOffset === range.endOffset
+            ),
+        );
+        return {
+          ...prev,
+          [msgId]: { ...prev[msgId], [partId]: newHighlightRanges },
+        };
+      });
+    },
+    [setHighlightedPartInfo],
+  );
+
   const onHighlightedClick = useCallback(
-    (msgId: string, info: { id: string; range: HighlightRange }) => {
-      const memoEntry = memos[msgId]?.find(
+    (msgId: string, partId: string, range: HighlightRange) => {
+      // const memoEntry = memos[msgId]?.find(
+      //   (m) =>
+      //     m.id === info.id &&
+      //     m.range.startOffset === info.range.startOffset &&
+      //     m.range.endOffset === info.range.endOffset,
+      // );
+      const memoEntry = memos[msgId]?.[partId]?.find(
         (m) =>
-          m.id === info.id &&
-          m.range.startOffset === info.range.startOffset &&
-          m.range.endOffset === info.range.endOffset,
+          m.range.startOffset === range.startOffset &&
+          m.range.endOffset === range.endOffset,
       );
-      const supplementaryDetail = supplementaryMessages[msgId]?.find(
+      const supplementaryDetail = supplementaryMessages[msgId]?.[partId]?.find(
         (entry) =>
-          entry.id === info.id &&
-          entry.range.startOffset === info.range.startOffset &&
-          entry.range.endOffset === info.range.endOffset,
+          entry.range.startOffset === range.startOffset &&
+          entry.range.endOffset === range.endOffset,
       );
       if (memoEntry) {
         console.log('Memo entry found for this selection.');
         setCurrentSelection({
           msgId,
-          id: info.id,
-          startOffset: info.range.startOffset,
-          endOffset: info.range.endOffset,
+          partId,
+          ...range,
         });
         setActionType('memo');
         setInputText(memoEntry ? memoEntry.memo : '');
@@ -261,31 +300,14 @@ const Main: FC = () => {
         console.log('Supplementary detail found for this selection.');
         setCurrentSelection({
           msgId,
-          id: info.id,
-          startOffset: info.range.startOffset,
-          endOffset: info.range.endOffset,
+          partId,
+          ...range,
         });
         // the first two messages should be the system prompt and the background message
         // for the explanation
         // currently dummy messages are added to the beginning of the explainMessageDetails
         // because they are not shown in the MessageHistory component
-        explainSetMessageDetails([
-          {
-            id: NaN,
-            role: 'user',
-            content: '',
-            model: model,
-            timestamp: new Date(),
-          },
-          {
-            id: NaN,
-            role: 'user',
-            content: '',
-            model: model,
-            timestamp: new Date(),
-          },
-          supplementaryDetail.supplementary!,
-        ]);
+        explainSetMessageDetails(supplementaryDetail.supplementary);
         setActionType('explain');
         setInputText('');
         setDrawerOpen(true);
@@ -304,54 +326,56 @@ const Main: FC = () => {
 
   const handleDrawerDelete = useCallback(() => {
     if (currentSelection) {
-      const { msgId, id, startOffset, endOffset } = currentSelection;
+      const { msgId, partId, startOffset, endOffset } = currentSelection;
 
       setHighlightedPartInfo((prev) => {
-        const currentHighlights = prev[msgId] || [];
-        // save ranges that are not the same as the current selection
-        const newHighlights = currentHighlights
-          .map((item) => {
-            if (item.id === id) {
-              return {
-                id: item.id,
-                ranges: item.ranges.filter(
-                  (r) =>
-                    !(
-                      r.startOffset === startOffset && r.endOffset === endOffset
-                    ),
-                ),
-              };
-            }
-            return item;
-          })
-          .filter((item) => item.ranges.length > 0);
-        return { ...prev, [msgId]: newHighlights };
+        const currentHighlightRanges = prev[msgId]?.[partId];
+        // drop the range that is the same as the current selection
+        const newHighlightRanges = currentHighlightRanges.filter(
+          (r) => !(r.startOffset === startOffset && r.endOffset === endOffset),
+        );
+        return {
+          ...prev,
+          [msgId]: { ...prev[msgId], [partId]: newHighlightRanges },
+        };
       });
 
       setMemos((prev) => {
-        const currentMemos = prev[msgId] || [];
+        const currentMemos = prev[msgId]?.[partId];
+        if (!currentMemos) return prev;
         const newMemos = currentMemos.filter(
           (m) =>
             !(
-              m.id === id &&
               m.range.startOffset === startOffset &&
               m.range.endOffset === endOffset
             ),
         );
-        return { ...prev, [msgId]: newMemos };
+        return {
+          ...prev,
+          [msgId]: {
+            ...prev[msgId],
+            [partId]: newMemos,
+          },
+        };
       });
 
       setSupplementaryMessages((prev) => {
-        const currentList = prev[msgId] || [];
-        const newList = currentList.filter(
+        const currentSupplementaryMessages = prev[msgId]?.[partId];
+        if (!currentSupplementaryMessages) return prev;
+        const newSupplementaryMessages = currentSupplementaryMessages.filter(
           (entry) =>
             !(
-              entry.id === id &&
               entry.range.startOffset === startOffset &&
               entry.range.endOffset === endOffset
             ),
         );
-        return { ...prev, [msgId]: newList };
+        return {
+          ...prev,
+          [msgId]: {
+            ...prev[msgId],
+            [partId]: newSupplementaryMessages,
+          },
+        };
       });
     }
 
@@ -363,137 +387,70 @@ const Main: FC = () => {
 
   const handleDrawerSave = useCallback(() => {
     if (currentSelection && actionType === 'memo') {
-      const { msgId, id, startOffset, endOffset } = currentSelection;
-      setHighlightedPartInfo((prev) => {
-        const currentHighlights = prev[msgId] || [];
-        const existingIndex = currentHighlights.findIndex(
-          (item) => item.id === id,
-        );
-        const newRange: HighlightRange = { startOffset, endOffset };
-        if (existingIndex >= 0) {
-          const existing = currentHighlights[existingIndex];
-          const alreadyExists = existing.ranges.some(
-            (r) =>
-              r.startOffset === newRange.startOffset &&
-              r.endOffset === newRange.endOffset,
-          );
-          if (!alreadyExists) {
-            const updated = {
-              ...existing,
-              ranges: [...existing.ranges, newRange],
-            };
-            const newHighlights = [...currentHighlights];
-            newHighlights[existingIndex] = updated;
-            return { ...prev, [msgId]: newHighlights };
-          }
-          return prev;
-        } else {
-          return {
-            ...prev,
-            [msgId]: [...currentHighlights, { id, ranges: [newRange] }],
-          };
-        }
-      });
+      const { msgId, partId, startOffset, endOffset } = currentSelection;
+
+      // if the selection is not highlighted yet, add it to the highlightedPartInfo
+      if (
+        !highlightedPartInfo[msgId]?.[partId]?.find(
+          (r) => r.startOffset === startOffset && r.endOffset === endOffset,
+        )
+      ) {
+        addHighlightRange(msgId, partId, { startOffset, endOffset });
+      }
+
       setMemos((prev) => {
-        const currentMemos = prev[msgId] || [];
-        const idx = currentMemos.findIndex(
+        // if memo already exists for the same range, update it
+        const currentMemo = prev[msgId]?.[partId]?.find(
           (m) =>
-            m.id === id &&
             m.range.startOffset === startOffset &&
             m.range.endOffset === endOffset,
         );
-        if (idx >= 0) {
-          const updated = { ...currentMemos[idx], memo: inputText };
-          const newMemos = [...currentMemos];
-          newMemos[idx] = updated;
-          newMemos.sort((a, b) => a.range.startOffset - b.range.startOffset);
-          return { ...prev, [msgId]: newMemos };
-        } else {
+        if (currentMemo) {
+          const newMemos = prev[msgId][partId].map((m) => {
+            if (
+              m.range.startOffset === startOffset &&
+              m.range.endOffset === endOffset
+            ) {
+              return { ...m, memo: inputText };
+            }
+            return m;
+          });
           return {
             ...prev,
-            [msgId]: [
-              ...currentMemos,
-              { id, range: { startOffset, endOffset }, memo: inputText },
-            ],
+            [msgId]: { ...prev[msgId], [partId]: newMemos },
           };
         }
+
+        const memoEntryToAdd: MemoEntry = {
+          range: { startOffset, endOffset },
+          memo: inputText,
+        };
+        const oldMemos = prev[msgId]?.[partId] || [];
+        const newMemos = [...oldMemos, memoEntryToAdd];
+        return {
+          ...prev,
+          [msgId]: { ...prev[msgId], [partId]: newMemos },
+        };
       });
     } else if (currentSelection && actionType === 'explain') {
-      setHighlightedPartInfo((prev) => {
-        const currentHighlights = prev[currentSelection.msgId] || [];
-        const existingIndex = currentHighlights.findIndex(
-          (item) => item.id === currentSelection.id,
-        );
-        const newRange: HighlightRange = {
-          startOffset: currentSelection.startOffset,
-          endOffset: currentSelection.endOffset,
-        };
+      const { msgId, partId, startOffset, endOffset } = currentSelection;
 
-        if (existingIndex >= 0) {
-          const existing = currentHighlights[existingIndex];
-          const alreadyExists = existing.ranges.some(
-            (r) =>
-              r.startOffset === newRange.startOffset &&
-              r.endOffset === newRange.endOffset,
-          );
-          if (!alreadyExists) {
-            const updated = {
-              ...existing,
-              ranges: [...existing.ranges, newRange],
-            };
-            const newHighlights = [...currentHighlights];
-            newHighlights[existingIndex] = updated;
-            return { ...prev, [currentSelection.msgId]: newHighlights };
-          }
-          return prev;
-        } else {
-          return {
-            ...prev,
-            [currentSelection.msgId]: [
-              ...currentHighlights,
-              { id: currentSelection.id, ranges: [newRange] },
-            ],
-          };
-        }
-      });
+      addHighlightRange(msgId, partId, { startOffset, endOffset });
 
       setSupplementaryMessages((prev) => {
-        const supplementaryDetail =
-          explainMessageDetails && explainMessageDetails.length > 0
-            ? explainMessageDetails[explainMessageDetails.length - 1]
-            : null;
-
-        const currentList = prev[currentSelection.msgId] || [];
-        const existingIndex = currentList.findIndex(
-          (entry) =>
-            entry.id === currentSelection.id &&
-            entry.range.startOffset === currentSelection.startOffset &&
-            entry.range.endOffset === currentSelection.endOffset,
-        );
-        if (existingIndex >= 0) {
-          const updatedEntry = {
-            ...currentList[existingIndex],
-            supplementary: supplementaryDetail,
-          };
-          const newList = [...currentList];
-          newList[existingIndex] = updatedEntry;
-          return { ...prev, [currentSelection.msgId]: newList };
-        } else {
-          return {
-            ...prev,
-            [currentSelection.msgId]: [
-              ...currentList,
-              {
-                id: currentSelection.id,
-                range: {
-                  startOffset: currentSelection.startOffset,
-                  endOffset: currentSelection.endOffset,
-                },
-                supplementary: supplementaryDetail,
-              },
-            ],
-          };
-        }
+        const supplementaryEntryToAdd: SupplementaryMessageEntry = {
+          range: { startOffset, endOffset },
+          supplementary: explainMessageDetails,
+        };
+        const oldSupplementaryMessages = prev[msgId]?.[partId] || [];
+        const newSupplementaryMessages = [
+          ...oldSupplementaryMessages,
+          supplementaryEntryToAdd,
+        ];
+        return {
+          ...prev,
+          [msgId]: { ...prev[msgId], [partId]: newSupplementaryMessages },
+        };
       });
     }
 
@@ -529,42 +486,61 @@ const Main: FC = () => {
       const { messages, memos, supplementaryMessages } = chatSessionData;
 
       // reconstruct the highlightedPartInfo
-      const highlightInfo: HighlightedPartInfo = {};
+      const highlightedPartInfo: HighlightedPartInfo = {};
       messages.forEach((msg) => {
-        console.log('msg', msg);
+        const highlightedPartsForMemos: HighlightedParts = {};
         const matchedMemos = memos[msg.id.toString()];
         if (matchedMemos) {
-          const highlights = matchedMemos.map((m) => ({
-            id: m.id,
-            ranges: [
-              {
+          for (const [partId, entry] of Object.entries(matchedMemos)) {
+            const highlightRanges: HighlightRange[] = [];
+            entry.forEach((m) => {
+              highlightRanges.push({
                 startOffset: m.range.startOffset,
                 endOffset: m.range.endOffset,
-              },
-            ],
-          }));
-          highlightInfo[msg.id.toString()] = highlights;
+              });
+            });
+            highlightedPartsForMemos[partId] = highlightRanges;
+          }
         }
+
+        const highlightedPartsForSupplementaryMessages: HighlightedParts = {};
         const matchedSupplementaryMessages =
           supplementaryMessages[msg.id.toString()];
         if (matchedSupplementaryMessages) {
-          const highlights = matchedSupplementaryMessages.map((m) => ({
-            id: m.id,
-            ranges: [
-              {
-                startOffset: m.range.startOffset,
-                endOffset: m.range.endOffset,
-              },
-            ],
-          }));
-          highlightInfo[msg.id.toString()].push(...highlights);
+          for (const [partId, entry] of Object.entries(
+            matchedSupplementaryMessages,
+          )) {
+            const highlightRanges: HighlightRange[] = [];
+            entry.forEach((e) => {
+              highlightRanges.push({
+                startOffset: e.range.startOffset,
+                endOffset: e.range.endOffset,
+              });
+            });
+            highlightedPartsForSupplementaryMessages[partId] = highlightRanges;
+          }
         }
-        // sort the highlights by startOffset
-        highlightInfo[msg.id.toString()].sort(
-          (a, b) => a.ranges[0].startOffset - b.ranges[0].startOffset,
-        );
+
+        // merge the two parts
+        const newHighlightedParts: HighlightedParts = {
+          ...highlightedPartsForMemos,
+        };
+        for (const [partId, entry] of Object.entries(
+          highlightedPartsForSupplementaryMessages,
+        )) {
+          if (newHighlightedParts[partId]) {
+            newHighlightedParts[partId] = [
+              ...newHighlightedParts[partId],
+              ...entry,
+            ];
+          } else {
+            newHighlightedParts[partId] = [...entry];
+          }
+        }
+
+        highlightedPartInfo[msg.id.toString()] = newHighlightedParts;
       });
-      setHighlightedPartInfo(highlightInfo);
+      setHighlightedPartInfo(highlightedPartInfo);
 
       // reconstruct the chat messages
       const chatMessages = messages.map((msg) => ({
@@ -631,26 +607,23 @@ const Main: FC = () => {
       if (isAutoScrollMode) scrollDown(true);
     }, 500);
 
-    const consoleLogIntervalId = setInterval(() => {
-      console.log('memos', memos);
-      console.log('supplementaryMessages', supplementaryMessages);
-      console.log('highlightedPartInfo', highlightedPartInfo);
-      console.log('chatMessages', chatMessages);
-      console.log('messageDetails', messageDetails);
-    }, 5000);
     return () => {
-      clearInterval(consoleLogIntervalId);
       clearInterval(intervalId);
     };
+  }, [isAutoScrollMode, scrollDown]);
+
+  const handleDoubleClick = useCallback(() => {
+    console.log('memos', memos);
+    console.log('supplementaryMessages', supplementaryMessages);
+    console.log('highlightedPartInfo', highlightedPartInfo);
+    console.log('chatMessages', chatMessages);
+    console.log('messageDetails', messageDetails);
   }, [
-    isAutoScrollMode,
-    scrollDown,
     memos,
     supplementaryMessages,
+    highlightedPartInfo,
     chatMessages,
     messageDetails,
-    highlightedPartInfo,
-    setMemos,
   ]);
 
   useEffect(() => {
@@ -683,6 +656,7 @@ const Main: FC = () => {
       boxSizing="border-box"
       pb={2}
       position="relative"
+      onDoubleClick={handleDoubleClick}
     >
       {/* we need to wrap AppHeader and AnalyticsDialog in DialogRoot to enable DialogRoot's context */}
       <DialogRoot
@@ -815,7 +789,7 @@ const Main: FC = () => {
                   explanation.
                 </Text>
                 <MessageHistory
-                  // exclude the system message and the prompt for "...について、もう少しだけ簡潔に説明してください。"
+                  // exclude the system message @/and the prompt for "...について、もう少しだけ簡潔に説明してください。"
                   messages={explainMessageDetails.slice(2)}
                   streaming={explainIsLoading}
                   streamingMessage={explainOutput}

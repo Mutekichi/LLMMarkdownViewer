@@ -18,21 +18,18 @@ export type HighlightRange = {
 };
 
 /**
- * HighlightInfo
- * - id: A unique ID to identify the target element.
- * - ranges: An array of HighlightRange objects for the element.
- */
-export type HighlightInfo = {
-  id: string;
-  ranges: HighlightRange[];
-};
-
-/**
  * PopoverInfo
  * Information needed to display the popover.
  */
 export interface PopoverInfo {
   text?: string;
+  absoluteStart: number;
+  absoluteEnd: number;
+  anchorRect: DOMRect;
+}
+
+export interface RenderPopoverInfo {
+  partId: string;
   absoluteStart: number;
   absoluteEnd: number;
   anchorRect: DOMRect;
@@ -52,24 +49,18 @@ export interface PopoverInfo {
  */
 export interface HighlightableElementProps {
   children: React.ReactNode;
-  id: string;
+  partId: string;
   onSelection?: (info: {
-    id: string;
+    partId: string;
     startOffset: number;
     endOffset: number;
   }) => void;
   renderPopover?: (
-    info: {
-      id: string;
-      text?: string;
-      absoluteStart: number;
-      absoluteEnd: number;
-      anchorRect: DOMRect;
-    },
+    info: RenderPopoverInfo,
     close: () => void,
   ) => React.ReactNode;
-  onHighlightedClick?: (info: { id: string; range: HighlightRange }) => void;
-  highlightInfo?: HighlightInfo;
+  onHighlightedClick?: (partsId: string, range: HighlightRange) => void;
+  highlightRanges: HighlightRange[];
   elementType?: string;
   [key: string]: any;
 }
@@ -85,6 +76,9 @@ const wrapText = (
   highlightRanges: HighlightRange[],
 ): React.ReactNode[] => {
   const segments: React.ReactNode[] = [];
+
+  console.log(highlightRanges);
+
   let localOffset = 0;
   // Extract relevant highlight ranges for this text node (those that overlap with the global offset)
   const relevantRanges = highlightRanges.filter(
@@ -123,9 +117,12 @@ const wrapText = (
         data-offset-start={globalStart + segHighlightStart}
         data-offset-end={globalStart + segHighlightEnd}
         data-highlighted="true"
-        color="blue.500"
-        textDecoration="underline"
+        color="blackAlpha.800"
+        // textDecoration="underline"
         cursor="pointer"
+        px="1"
+        bg="yellow.100"
+        borderRadius="sm"
       >
         {highlightedText}
       </Box>,
@@ -190,11 +187,11 @@ const wrapChildren = (
 
 export const HighlightableElement: React.FC<HighlightableElementProps> = ({
   children,
-  id,
+  partId,
   onSelection,
   renderPopover,
   onHighlightedClick,
-  highlightInfo,
+  highlightRanges,
   elementType = 'p',
   ...rest
 }) => {
@@ -204,14 +201,14 @@ export const HighlightableElement: React.FC<HighlightableElementProps> = ({
   );
   const closePopover = () => setPopoverInfo(null);
 
-  console.log(highlightInfo);
+  console.log('ranges', highlightRanges);
 
-  const highlightRanges = highlightInfo
-    ? [...highlightInfo.ranges].sort((a, b) => a.startOffset - b.startOffset)
-    : [];
+  const sortedRanges = highlightRanges.sort(
+    (a, b) => a.startOffset - b.startOffset,
+  );
 
   // process each text node recursively and attach offset information to each text
-  const { newChildren } = wrapChildren(children, highlightRanges, 0);
+  const { newChildren } = wrapChildren(children, sortedRanges, 0);
 
   const handleClick = (e: React.MouseEvent<HTMLElement>) => {
     let spanElement = e.target as HTMLElement;
@@ -232,9 +229,9 @@ export const HighlightableElement: React.FC<HighlightableElementProps> = ({
       spanElement.getAttribute('data-highlighted') === 'true' &&
       onHighlightedClick
     ) {
-      onHighlightedClick({
-        id,
-        range: { startOffset: absoluteStart, endOffset: absoluteEnd },
+      onHighlightedClick(partId, {
+        startOffset: absoluteStart,
+        endOffset: absoluteEnd,
       });
     }
   };
@@ -278,9 +275,9 @@ export const HighlightableElement: React.FC<HighlightableElementProps> = ({
     // already highlighted
     if (spanElement.getAttribute('data-highlighted') === 'true') {
       if (onHighlightedClick) {
-        onHighlightedClick({
-          id,
-          range: { startOffset: absoluteStart, endOffset: absoluteEnd },
+        onHighlightedClick(partId, {
+          startOffset: absoluteStart,
+          endOffset: absoluteEnd,
         });
       }
       selection.removeAllRanges();
@@ -293,7 +290,11 @@ export const HighlightableElement: React.FC<HighlightableElementProps> = ({
       const rect = range.getBoundingClientRect();
       setPopoverInfo({ absoluteStart, absoluteEnd, text, anchorRect: rect });
     } else if (onSelection) {
-      onSelection({ id, startOffset: absoluteStart, endOffset: absoluteEnd });
+      onSelection({
+        partId: partId,
+        startOffset: absoluteStart,
+        endOffset: absoluteEnd,
+      });
     }
     selection.removeAllRanges();
   };
@@ -304,7 +305,7 @@ export const HighlightableElement: React.FC<HighlightableElementProps> = ({
         as={elementType as React.ElementType}
         onMouseUp={handleMouseUp}
         onClick={handleClick}
-        data-id={id}
+        data-id={partId}
         {...rest}
       >
         {newChildren}
@@ -334,7 +335,7 @@ export const HighlightableElement: React.FC<HighlightableElementProps> = ({
               <Box position="absolute" width="1px" height="1px" />
             </PopoverTrigger>
             <PopoverContent asChild>
-              {renderPopover({ id, ...popoverInfo }, closePopover)}
+              {renderPopover({ partId, ...popoverInfo }, closePopover)}
             </PopoverContent>
           </PopoverRoot>
         </Box>

@@ -2,6 +2,8 @@ import { calculateCost } from '@/config/llm-models';
 import { MessageDetail } from '@/hooks/useOpenai';
 import { Box, HStack, VStack } from '@chakra-ui/react';
 import { FC, memo } from 'react';
+import { HighlightedPartInfo } from '../Main';
+import { HighlightRange } from '../MarkdownViewer/HighlightableReactMarkdown/HighlightableElement';
 import { Message } from '../Message/index';
 interface MessageHistoryProps {
   messages: MessageDetail[];
@@ -14,7 +16,11 @@ interface MessageHistoryProps {
       info: any,
       close: () => void,
     ) => React.ReactNode;
-    onHighlightedClick: (msgId: string, info: any) => void;
+    onHighlightedClick: (
+      msgId: string,
+      partsId: string,
+      range: HighlightRange,
+    ) => void;
   };
   hasBorder?: boolean;
 }
@@ -41,9 +47,18 @@ interface ResponseProps {
   hasBorder?: boolean;
   isStreaming?: boolean;
   highlight?: {
-    highlightedPartInfo: { [messageId: string]: any };
-    renderPopover: (info: any, close: () => void) => React.ReactNode;
-    onHighlightedClick: (info: any) => void;
+    highlightedPartInfo: HighlightedPartInfo;
+    renderPopover: (
+      info: {
+        partId: string;
+        text?: string;
+        absoluteStart: number;
+        absoluteEnd: number;
+        anchorRect: DOMRect;
+      },
+      close: () => void,
+    ) => React.ReactNode;
+    onHighlightedClick: (partsId: string, range: HighlightRange) => void;
   };
 }
 
@@ -83,7 +98,7 @@ const Response = memo<ResponseProps>((props) => {
               ? {
                   renderPopover: highlight.renderPopover,
                   onHighlightedClick: highlight.onHighlightedClick,
-                  highlightedPartInfo:
+                  highlightedParts:
                     highlight.highlightedPartInfo[messageId] || [],
                 }
               : undefined
@@ -105,7 +120,11 @@ const PastMessages = memo<{
       info: any,
       close: () => void,
     ) => React.ReactNode;
-    onHighlightedClick: (msgId: string, info: any) => void;
+    onHighlightedClick: (
+      msgId: string,
+      partsId: string,
+      range: HighlightRange,
+    ) => void;
   };
   hasBorder?: boolean;
 }>((props) => {
@@ -141,10 +160,11 @@ const PastMessages = memo<{
                         )
                     : () => null,
                   onHighlightedClick: highlight
-                    ? (info) =>
+                    ? (partsId, range) =>
                         highlight.onHighlightedClick(
                           message.id.toString(),
-                          info,
+                          partsId,
+                          range,
                         )
                     : () => null,
                 }
@@ -158,7 +178,13 @@ const PastMessages = memo<{
 });
 
 export const MessageHistory: FC<MessageHistoryProps> = (props) => {
-  const { messages, streaming, streamingMessage, highlight, hasBorder } = props;
+  const {
+    messages,
+    streaming,
+    streamingMessage,
+    highlight,
+    hasBorder = true,
+  } = props;
   return (
     <VStack align="stretch" p={4} minH="min-content" w="100%">
       <PastMessages
