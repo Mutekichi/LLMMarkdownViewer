@@ -67,6 +67,7 @@ export interface HighlightableReactMarkdownProps {
 export const HighlightableReactMarkdown: React.FC<
   HighlightableReactMarkdownProps
 > = (props) => {
+  console.log('rendering HighlightableReactMarkdown');
   const {
     markdown,
     highlightedParts: highlightedParts,

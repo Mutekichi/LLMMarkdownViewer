@@ -77,8 +77,6 @@ const wrapText = (
 ): React.ReactNode[] => {
   const segments: React.ReactNode[] = [];
 
-  console.log(highlightRanges);
-
   let localOffset = 0;
   // Extract relevant highlight ranges for this text node (those that overlap with the global offset)
   const relevantRanges = highlightRanges.filter(
@@ -200,8 +198,6 @@ export const HighlightableElement: React.FC<HighlightableElementProps> = ({
     null,
   );
   const closePopover = () => setPopoverInfo(null);
-
-  console.log('ranges', highlightRanges);
 
   const sortedRanges = highlightRanges.sort(
     (a, b) => a.startOffset - b.startOffset,

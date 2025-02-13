@@ -105,7 +105,7 @@ const Response = memo<ResponseProps>((props) => {
           }
           hasBorder={hasBorder}
         />
-        {cost && Number((cost / 1000000).toFixed(6)).toString()}
+        {cost && '$ ' + Number((cost / 1000000).toFixed(6)).toString()}
       </Box>
     </HStack>
   );
@@ -138,14 +138,16 @@ const PastMessages = memo<{
           responseType={message.role}
           response={message.content}
           cost={
-            message.inputTokens &&
-            message.outputTokens &&
-            message.model &&
-            calculateCost(
-              message.model,
-              message.inputTokens,
-              message.outputTokens,
-            )
+            message.cost
+              ? message.cost
+              : message.inputTokens &&
+                message.outputTokens &&
+                message.model &&
+                calculateCost(
+                  message.model,
+                  message.inputTokens,
+                  message.outputTokens,
+                )
           }
           highlight={
             highlight

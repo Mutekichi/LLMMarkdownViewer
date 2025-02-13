@@ -5,6 +5,7 @@ import { MessageDetail } from '@/hooks/useOpenai';
 
 interface ChatSessionData {
   messages: ChatSessionMessage[];
+  summary: string;
 }
 
 interface ChatSessionMessage {
@@ -38,6 +39,7 @@ export const createChatSessionData = (
   messages: MessageDetail[],
   memos: Memos,
   supplementaryMessages: SupplementaryMessages,
+  summary: string,
 ): ChatSessionData => {
   return {
     messages: messages.map((msg) => {
@@ -115,6 +117,7 @@ export const createChatSessionData = (
       }
       return messageData;
     }),
+    summary,
   };
 };
 
@@ -155,6 +158,7 @@ export const loadChatSession = async (
       content: msg.content,
       model: msg.model ? (msg.model as OpenaiModelType) : undefined,
       timestamp: new Date(msg.timestamp),
+      cost: msg.cost,
     });
 
     const memosInMessage = msg.memos;
@@ -234,4 +238,34 @@ export const loadChatSession = async (
   });
 
   return { messages, memos, supplementaryMessages };
+};
+
+export interface ChatSessionListItem {
+  id: number;
+  summary: string;
+}
+
+/**
+ * get chat session list
+ * @param cursor
+ * @param take
+ */
+export const loadChatSessions = async (
+  cursor?: number,
+  take: number = 10,
+): Promise<ChatSessionListItem[]> => {
+  const params = new URLSearchParams();
+  if (cursor !== undefined) {
+    params.set('cursor', String(cursor));
+  }
+  params.set('take', String(take));
+
+  const res = await fetch(`/api/chat-sessions?${params.toString()}`);
+  if (!res.ok) {
+    throw new Error('Failed to load chat sessions');
+  }
+
+  const sessions: ChatSessionListItem[] = await res.json();
+
+  return sessions;
 };

@@ -21,7 +21,6 @@ interface MessageSettingPartProps {
   setIsTemporaryChatOpen: (isOpen: boolean) => void;
   temporaryResetHistory: () => void;
   onSaveButtonClick: () => void;
-  onLoadButtonClick: () => void;
   onResetButtonClick: () => void;
 }
 
@@ -43,7 +42,6 @@ export const MessageSettingPart: FC<MessageSettingPartProps> = memo((props) => {
     setIsTemporaryChatOpen,
     temporaryResetHistory,
     onSaveButtonClick,
-    onLoadButtonClick,
     onResetButtonClick,
   } = props;
 
@@ -134,22 +132,6 @@ export const MessageSettingPart: FC<MessageSettingPartProps> = memo((props) => {
         _hover={{ bgColor: 'blackAlpha.50' }}
         onClick={() => {
           onSaveButtonClick();
-        }}
-      >
-        {/* <img src="/icons/vanish.svg" alt="SVG" width={60} height={60} /> */}
-        <Icon as={CiSaveDown1} boxSize={10} color="blackAlpha.800" />
-      </Button>
-      <Button
-        display="flex"
-        h="100%"
-        w="80px"
-        bgColor="transparent"
-        opacity={1}
-        px={2}
-        borderRadius={10}
-        _hover={{ bgColor: 'blackAlpha.50' }}
-        onClick={() => {
-          onLoadButtonClick();
         }}
       >
         {/* <img src="/icons/vanish.svg" alt="SVG" width={60} height={60} /> */}

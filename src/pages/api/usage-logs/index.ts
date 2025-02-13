@@ -1,6 +1,5 @@
 import prisma from '@/lib/prisma';
 import { NextApiRequest, NextApiResponse } from 'next';
-
 export default async function handler(
   req: NextApiRequest,
   res: NextApiResponse,
@@ -25,4 +24,3 @@ export default async function handler(
     return res.status(405).json({ error: 'Method not allowed' });
   }
 }
-// Compare this snippet from src/pages/api/usage-logs.ts:

@@ -1,6 +1,12 @@
 'use client';
 import { HighlightRange } from '@/components/MarkdownViewer/HighlightableReactMarkdown/HighlightableElement';
-import { DialogRoot } from '@/components/ui/dialog';
+import {
+  DialogBody,
+  DialogContent,
+  DialogFooter,
+  DialogHeader,
+  DialogRoot,
+} from '@/components/ui/dialog';
 import {
   DrawerBody,
   DrawerContent,
@@ -12,15 +18,18 @@ import { Tooltip } from '@/components/ui/tooltip';
 import { useContainerRef } from '@/contexts/ContainerRefContext';
 import { MessageDetail, useOpenai } from '@/hooks/useOpenai';
 import {
+  ChatSessionListItem,
   createChatSessionData,
   loadChatSession,
+  loadChatSessions,
   saveChatSession,
-} from '@/lib/storageChatSession';
+} from '@/lib/chatSessionService';
 import { checkInputLength, excludeSystemMessages } from '@/utils/chatUtils';
 import {
   Box,
   Button,
   Center,
+  For,
   HStack,
   Icon,
   Input,
@@ -124,6 +133,10 @@ const Main: FC = () => {
   const [isAutoScrollMode, setIsAutoScrollMode] = useState(false);
   const [shouldStartExplanation, setShouldStartExplanation] = useState(false);
   const [textToExplain, setTextToExplain] = useState('');
+  const [sessions, setSessions] = useState<ChatSessionListItem[]>([]);
+  const [sessionsCursor, setSessionsCursor] = useState<number | null>(null);
+  const [isSaveDialogOpen, setIsSaveDialogOpen] = useState(false);
+  const [summaryInput, setSummaryInput] = useState('');
 
   const [highlightedPartInfo, setHighlightedPartInfo] =
     useState<HighlightedPartInfo>({});
@@ -135,6 +148,7 @@ const Main: FC = () => {
     useState<CurrentSelection | null>(null);
   const [actionType, setActionType] = useState<'memo' | 'explain' | null>(null);
   const [drawerOpen, setDrawerOpen] = useState(false);
+  const [sidebarOpen, setSidebarOpen] = useState(false);
   const [inputText, setInputText] = useState('');
 
   const renderPopover = useCallback(
@@ -270,12 +284,6 @@ const Main: FC = () => {
 
   const onHighlightedClick = useCallback(
     (msgId: string, partId: string, range: HighlightRange) => {
-      // const memoEntry = memos[msgId]?.find(
-      //   (m) =>
-      //     m.id === info.id &&
-      //     m.range.startOffset === info.range.startOffset &&
-      //     m.range.endOffset === info.range.endOffset,
-      // );
       const memoEntry = memos[msgId]?.[partId]?.find(
         (m) =>
           m.range.startOffset === range.startOffset &&
@@ -480,84 +488,88 @@ const Main: FC = () => {
     [containerRef, isNearBottom],
   );
 
-  const handleLoadButtonClick = useCallback(async () => {
-    const chatSessionData = await loadChatSession(inputPrompt);
-    if (chatSessionData) {
-      const { messages, memos, supplementaryMessages } = chatSessionData;
+  const showSession = useCallback(
+    async (sessionId: number | string) => {
+      const chatSessionData = await loadChatSession(sessionId.toString());
+      if (chatSessionData) {
+        const { messages, memos, supplementaryMessages } = chatSessionData;
 
-      // reconstruct the highlightedPartInfo
-      const highlightedPartInfo: HighlightedPartInfo = {};
-      messages.forEach((msg) => {
-        const highlightedPartsForMemos: HighlightedParts = {};
-        const matchedMemos = memos[msg.id.toString()];
-        if (matchedMemos) {
-          for (const [partId, entry] of Object.entries(matchedMemos)) {
-            const highlightRanges: HighlightRange[] = [];
-            entry.forEach((m) => {
-              highlightRanges.push({
-                startOffset: m.range.startOffset,
-                endOffset: m.range.endOffset,
+        // reconstruct the highlightedPartInfo
+        const highlightedPartInfo: HighlightedPartInfo = {};
+        messages.forEach((msg) => {
+          const highlightedPartsForMemos: HighlightedParts = {};
+          const matchedMemos = memos[msg.id.toString()];
+          if (matchedMemos) {
+            for (const [partId, entry] of Object.entries(matchedMemos)) {
+              const highlightRanges: HighlightRange[] = [];
+              entry.forEach((m) => {
+                highlightRanges.push({
+                  startOffset: m.range.startOffset,
+                  endOffset: m.range.endOffset,
+                });
               });
-            });
-            highlightedPartsForMemos[partId] = highlightRanges;
+              highlightedPartsForMemos[partId] = highlightRanges;
+            }
           }
-        }
 
-        const highlightedPartsForSupplementaryMessages: HighlightedParts = {};
-        const matchedSupplementaryMessages =
-          supplementaryMessages[msg.id.toString()];
-        if (matchedSupplementaryMessages) {
+          const highlightedPartsForSupplementaryMessages: HighlightedParts = {};
+          const matchedSupplementaryMessages =
+            supplementaryMessages[msg.id.toString()];
+          if (matchedSupplementaryMessages) {
+            for (const [partId, entry] of Object.entries(
+              matchedSupplementaryMessages,
+            )) {
+              const highlightRanges: HighlightRange[] = [];
+              entry.forEach((e) => {
+                highlightRanges.push({
+                  startOffset: e.range.startOffset,
+                  endOffset: e.range.endOffset,
+                });
+              });
+              highlightedPartsForSupplementaryMessages[partId] =
+                highlightRanges;
+            }
+          }
+
+          // merge the two parts
+          const newHighlightedParts: HighlightedParts = {
+            ...highlightedPartsForMemos,
+          };
           for (const [partId, entry] of Object.entries(
-            matchedSupplementaryMessages,
+            highlightedPartsForSupplementaryMessages,
           )) {
-            const highlightRanges: HighlightRange[] = [];
-            entry.forEach((e) => {
-              highlightRanges.push({
-                startOffset: e.range.startOffset,
-                endOffset: e.range.endOffset,
-              });
-            });
-            highlightedPartsForSupplementaryMessages[partId] = highlightRanges;
+            if (newHighlightedParts[partId]) {
+              newHighlightedParts[partId] = [
+                ...newHighlightedParts[partId],
+                ...entry,
+              ];
+            } else {
+              newHighlightedParts[partId] = [...entry];
+            }
           }
-        }
 
-        // merge the two parts
-        const newHighlightedParts: HighlightedParts = {
-          ...highlightedPartsForMemos,
-        };
-        for (const [partId, entry] of Object.entries(
-          highlightedPartsForSupplementaryMessages,
-        )) {
-          if (newHighlightedParts[partId]) {
-            newHighlightedParts[partId] = [
-              ...newHighlightedParts[partId],
-              ...entry,
-            ];
-          } else {
-            newHighlightedParts[partId] = [...entry];
-          }
-        }
+          highlightedPartInfo[msg.id.toString()] = newHighlightedParts;
+        });
+        setHighlightedPartInfo(highlightedPartInfo);
 
-        highlightedPartInfo[msg.id.toString()] = newHighlightedParts;
-      });
-      setHighlightedPartInfo(highlightedPartInfo);
+        // reconstruct the chat messages
+        const chatMessages = messages.map((msg) => ({
+          role: msg.role,
+          content: msg.content,
+          model: msg.model,
+          timestamp: new Date(msg.timestamp),
+        }));
+        setChatMessages(chatMessages);
 
-      // reconstruct the chat messages
-      const chatMessages = messages.map((msg) => ({
-        role: msg.role,
-        content: msg.content,
-        model: msg.model,
-        timestamp: new Date(msg.timestamp),
-      }));
-      setChatMessages(chatMessages);
-
-      setMemos(memos);
-      setSupplementaryMessages(supplementaryMessages);
-      setMessageDetails(messages);
-    } else {
-      console.error('Failed to load chat session data.');
-    }
-  }, [inputPrompt, setChatMessages, setMessageDetails]);
+        setMemos(memos);
+        setSupplementaryMessages(supplementaryMessages);
+        setMessageDetails(messages);
+      } else {
+        console.error('Failed to load chat session data.');
+      }
+    },
+    [inputPrompt, setChatMessages, setMessageDetails],
+  );
 
   const handleResetButtonClick = useCallback(() => {
     resetHistory();
@@ -570,15 +582,46 @@ const Main: FC = () => {
     setHighlightedPartInfo({});
   }, [resetHistory, isTemporaryChatOpen, temporaryResetHistory]);
 
-  const handleSaveButtonClick = useCallback(async () => {
+  const handleSaveButtonClick = useCallback(() => {
+    setIsSaveDialogOpen(true);
+  }, []);
+
+  const handleConfirmSave = useCallback(async () => {
     const chatSessionData = createChatSessionData(
       messageDetails,
       memos,
       supplementaryMessages,
+      summaryInput,
     );
 
     await saveChatSession(chatSessionData);
-  }, [messageDetails, memos, supplementaryMessages]);
+
+    setIsSaveDialogOpen(false);
+    setSummaryInput('');
+  }, [messageDetails, memos, supplementaryMessages, summaryInput]);
+
+  const loadMoreChatSessions = useCallback(async () => {
+    const SESSIONS_TO_LOAD_MORE = 10;
+    if (sessionsCursor == null) return;
+
+    try {
+      const more = await loadChatSessions(
+        sessionsCursor,
+        SESSIONS_TO_LOAD_MORE,
+      );
+      setSessions([...sessions, ...more]);
+
+      // if # of loaded session is less than the requested number,
+      // it means there are no more sessions to load, so set the cursor to null
+      if (more.length < SESSIONS_TO_LOAD_MORE) {
+        setSessionsCursor(null);
+      } else {
+        setSessionsCursor(more[more.length - 1].id);
+      }
+    } catch (err) {
+      console.error(err);
+    }
+  }, [sessionsCursor, sessions]);
 
   useEffect(() => {
     if (shouldStartExplanation) {
@@ -645,6 +688,24 @@ const Main: FC = () => {
     };
   }, []);
 
+  useEffect(() => {
+    (async () => {
+      const SESSIONS_TO_LOAD_FIRST = 30;
+      try {
+        const data = await loadChatSessions(undefined, SESSIONS_TO_LOAD_FIRST);
+        setSessions(data);
+        if (data.length > 0) {
+          setSessionsCursor(data[data.length - 1].id);
+        }
+        for (const session of data) {
+          console.log(session);
+        }
+      } catch (err) {
+        console.error(err);
+      }
+    })();
+  }, []);
+
   return (
     <VStack
       w="100%"
@@ -666,8 +727,38 @@ const Main: FC = () => {
         placement="center"
         motionPreset="slide-in-bottom"
       >
-        <AppHeader />
+        <AppHeader onSidebarIconClick={() => setSidebarOpen(true)} />
         <AnalyticsDialog />
+      </DialogRoot>
+
+      <DialogRoot
+        open={isSaveDialogOpen}
+        onOpenChange={(e) => setIsSaveDialogOpen(e.open)}
+        size="md"
+        placement="center"
+      >
+        <DialogContent>
+          <DialogHeader>Save Chat Session</DialogHeader>
+          <DialogBody>
+            <Input
+              placeholder="Enter summary..."
+              value={summaryInput}
+              onChange={(e) => setSummaryInput(e.target.value)}
+            />
+          </DialogBody>
+          <DialogFooter>
+            <Button
+              variant="outline"
+              mr={3}
+              onClick={() => setIsSaveDialogOpen(false)}
+            >
+              Cancel
+            </Button>
+            <Button colorScheme="blue" onClick={handleConfirmSave}>
+              Save
+            </Button>
+          </DialogFooter>
+        </DialogContent>
       </DialogRoot>
 
       <VStack
@@ -696,7 +787,7 @@ const Main: FC = () => {
             w="80%"
             gap={2}
             justify="space-between"
-            bgColor="#eeeeee"
+            bgColor="blackAlpha.100"
             flex="1"
             borderTopRadius={20}
             border="1"
@@ -757,7 +848,6 @@ const Main: FC = () => {
           setIsTemporaryChatOpen={setIsTemporaryChatOpen}
           temporaryResetHistory={temporaryResetHistory}
           onSaveButtonClick={handleSaveButtonClick}
-          onLoadButtonClick={handleLoadButtonClick}
           onResetButtonClick={handleResetButtonClick}
         />
       </VStack>
@@ -815,6 +905,76 @@ const Main: FC = () => {
               Save
             </Button>
           </DrawerFooter>
+        </DrawerContent>
+      </DrawerRoot>
+      <DrawerRoot
+        open={sidebarOpen}
+        onOpenChange={(e) => setSidebarOpen(e.open)}
+        placement="start"
+      >
+        <DrawerContent>
+          <DrawerHeader fontSize="md">History</DrawerHeader>
+          <DrawerBody>
+            <VStack
+              gap={2}
+              overflowX="hidden"
+              overflowY="auto"
+              _scrollbar={{
+                width: '10px',
+                background: '#000000',
+                backgroundColor: '#000000',
+              }}
+              _scrollbarTrack={{
+                backgroundColor: '#000000',
+              }}
+              _scrollbarThumb={{
+                backgroundColor: '#ffffff',
+              }}
+              pb={4}
+              mb={4}
+            >
+              <For
+                each={sessions}
+                fallback={<Text>No chat sessions found.</Text>}
+              >
+                {(item) => (
+                  <Button
+                    w="100%"
+                    h="30px"
+                    fontSize="md"
+                    mx={1}
+                    py={6}
+                    bgColor="white"
+                    borderRadius={10}
+                    _hover={{ bgColor: 'gray.100' }}
+                    color="black"
+                    key={item.id}
+                    onClick={() => showSession(item.id)}
+                  >
+                    <HStack>
+                      <Text>{item.summary || 'Unnamed chat'}</Text>
+                      <Button
+                        size="xs"
+                        variant="ghost"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          e.preventDefault();
+                        }}
+                      ></Button>
+                    </HStack>
+                  </Button>
+                )}
+              </For>
+
+              {sessionsCursor != null ? (
+                <Button w="100%" onClick={loadMoreChatSessions}>
+                  Load More
+                </Button>
+              ) : (
+                <Text>No more chat sessions to load.</Text>
+              )}
+            </VStack>
+          </DrawerBody>
         </DrawerContent>
       </DrawerRoot>
     </VStack>
