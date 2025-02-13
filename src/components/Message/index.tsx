@@ -3,7 +3,7 @@ import { HighlightableReactMarkdown } from '@/components/MarkdownViewer/Highligh
 import { ChevronDownIcon, ChevronUpIcon } from '@chakra-ui/icons';
 import { Box, Button, Icon } from '@chakra-ui/react';
 import { motion } from 'framer-motion';
-import { FC, useState } from 'react';
+import { FC, memo, useState } from 'react';
 import { HighlightedParts } from '../Main';
 import { HighlightRange } from '../MarkdownViewer/HighlightableReactMarkdown/HighlightableElement';
 interface MessageProps {
@@ -35,7 +35,7 @@ interface MessageProps {
 
 const MotionBox = motion(Box);
 
-export const Message: FC<MessageProps> = (props) => {
+const MessageComponent: FC<MessageProps> = (props) => {
   const { message, bgColor, borderColor, hasBorder, highlight } = props;
 
   const [isCollapsed, setIsCollapsed] = useState(false);
@@ -94,3 +94,5 @@ export const Message: FC<MessageProps> = (props) => {
     </Box>
   );
 };
+
+export const Message = memo(MessageComponent);

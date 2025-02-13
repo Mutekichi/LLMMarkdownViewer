@@ -21,6 +21,7 @@ model ChatSession {
   createdAt DateTime      @default(now())
   updatedAt DateTime      @updatedAt
   messages  ChatMessage[]
+  summary   String        @default("")
 }
 
 model ChatMessage {

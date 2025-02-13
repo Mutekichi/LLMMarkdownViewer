@@ -235,3 +235,33 @@ export const loadChatSession = async (
 
   return { messages, memos, supplementaryMessages };
 };
+
+export interface ChatSessionListItem {
+  id: number;
+  summary: string;
+}
+
+/**
+ * get chat session list
+ * @param cursor
+ * @param take
+ */
+export const loadChatSessions = async (
+  cursor?: number,
+  take: number = 10,
+): Promise<ChatSessionListItem[]> => {
+  const params = new URLSearchParams();
+  if (cursor !== undefined) {
+    params.set('cursor', String(cursor));
+  }
+  params.set('take', String(take));
+
+  const res = await fetch(`/api/chat-sessions?${params.toString()}`);
+  if (!res.ok) {
+    throw new Error('Failed to load chat sessions');
+  }
+
+  const sessions: ChatSessionListItem[] = await res.json();
+
+  return sessions;
+};
