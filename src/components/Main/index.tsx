@@ -1,6 +1,12 @@
 'use client';
 import { HighlightRange } from '@/components/MarkdownViewer/HighlightableReactMarkdown/HighlightableElement';
-import { DialogRoot } from '@/components/ui/dialog';
+import {
+  DialogBody,
+  DialogContent,
+  DialogFooter,
+  DialogHeader,
+  DialogRoot,
+} from '@/components/ui/dialog';
 import {
   DrawerBody,
   DrawerContent,
@@ -129,6 +135,8 @@ const Main: FC = () => {
   const [textToExplain, setTextToExplain] = useState('');
   const [sessions, setSessions] = useState<ChatSessionListItem[]>([]);
   const [sessionsCursor, setSessionsCursor] = useState<number | null>(null);
+  const [isSaveDialogOpen, setIsSaveDialogOpen] = useState(false);
+  const [summaryInput, setSummaryInput] = useState('');
 
   const [highlightedPartInfo, setHighlightedPartInfo] =
     useState<HighlightedPartInfo>({});
@@ -574,29 +582,45 @@ const Main: FC = () => {
     setHighlightedPartInfo({});
   }, [resetHistory, isTemporaryChatOpen, temporaryResetHistory]);
 
-  const handleSaveButtonClick = useCallback(async () => {
+  const handleSaveButtonClick = useCallback(() => {
+    setIsSaveDialogOpen(true);
+  }, []);
+
+  const handleConfirmSave = useCallback(async () => {
     const chatSessionData = createChatSessionData(
       messageDetails,
       memos,
       supplementaryMessages,
+      summaryInput,
     );
 
     await saveChatSession(chatSessionData);
-  }, [messageDetails, memos, supplementaryMessages]);
+
+    setIsSaveDialogOpen(false);
+    setSummaryInput('');
+  }, [messageDetails, memos, supplementaryMessages, summaryInput]);
 
   const loadMoreChatSessions = useCallback(async () => {
-    async () => {
-      if (!sessionsCursor) return;
-      try {
-        const more = await loadChatSessions(sessionsCursor, 10);
-        setSessions([...sessions, ...more]);
-        if (more.length > 0) {
-          setSessionsCursor(more[more.length - 1].id);
-        }
-      } catch (err) {
-        console.error(err);
+    const SESSIONS_TO_LOAD_MORE = 10;
+    if (sessionsCursor == null) return;
+
+    try {
+      const more = await loadChatSessions(
+        sessionsCursor,
+        SESSIONS_TO_LOAD_MORE,
+      );
+      setSessions([...sessions, ...more]);
+
+      // if # of loaded session is less than the requested number,
+      // it means there are no more sessions to load, so set the cursor to null
+      if (more.length < SESSIONS_TO_LOAD_MORE) {
+        setSessionsCursor(null);
+      } else {
+        setSessionsCursor(more[more.length - 1].id);
       }
-    };
+    } catch (err) {
+      console.error(err);
+    }
   }, [sessionsCursor, sessions]);
 
   useEffect(() => {
@@ -666,8 +690,9 @@ const Main: FC = () => {
 
   useEffect(() => {
     (async () => {
+      const SESSIONS_TO_LOAD_FIRST = 30;
       try {
-        const data = await loadChatSessions(undefined, 30);
+        const data = await loadChatSessions(undefined, SESSIONS_TO_LOAD_FIRST);
         setSessions(data);
         if (data.length > 0) {
           setSessionsCursor(data[data.length - 1].id);
@@ -706,6 +731,36 @@ const Main: FC = () => {
         <AnalyticsDialog />
       </DialogRoot>
 
+      <DialogRoot
+        open={isSaveDialogOpen}
+        onOpenChange={(e) => setIsSaveDialogOpen(e.open)}
+        size="md"
+        placement="center"
+      >
+        <DialogContent>
+          <DialogHeader>Save Chat Session</DialogHeader>
+          <DialogBody>
+            <Input
+              placeholder="Enter summary..."
+              value={summaryInput}
+              onChange={(e) => setSummaryInput(e.target.value)}
+            />
+          </DialogBody>
+          <DialogFooter>
+            <Button
+              variant="outline"
+              mr={3}
+              onClick={() => setIsSaveDialogOpen(false)}
+            >
+              Cancel
+            </Button>
+            <Button colorScheme="blue" onClick={handleConfirmSave}>
+              Save
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </DialogRoot>
+
       <VStack
         flex="1"
         overflowY="auto"
@@ -732,7 +787,7 @@ const Main: FC = () => {
             w="80%"
             gap={2}
             justify="space-between"
-            bgColor="#eeeeee"
+            bgColor="blackAlpha.100"
             flex="1"
             borderTopRadius={20}
             border="1"
@@ -793,7 +848,6 @@ const Main: FC = () => {
           setIsTemporaryChatOpen={setIsTemporaryChatOpen}
           temporaryResetHistory={temporaryResetHistory}
           onSaveButtonClick={handleSaveButtonClick}
-          onLoadButtonClick={() => {}}
           onResetButtonClick={handleResetButtonClick}
         />
       </VStack>
@@ -897,10 +951,28 @@ const Main: FC = () => {
                     key={item.id}
                     onClick={() => showSession(item.id)}
                   >
-                    {item.summary || 'Unnamed chat'}
+                    <HStack>
+                      <Text>{item.summary || 'Unnamed chat'}</Text>
+                      <Button
+                        size="xs"
+                        variant="ghost"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          e.preventDefault();
+                        }}
+                      ></Button>
+                    </HStack>
                   </Button>
                 )}
               </For>
+
+              {sessionsCursor != null ? (
+                <Button w="100%" onClick={loadMoreChatSessions}>
+                  Load More
+                </Button>
+              ) : (
+                <Text>No more chat sessions to load.</Text>
+              )}
             </VStack>
           </DrawerBody>
         </DrawerContent>

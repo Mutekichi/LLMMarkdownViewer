@@ -16,18 +16,19 @@ const handler = async (
 
 const createSession = async (req: NextApiRequest, res: NextApiResponse) => {
   try {
-    const { createdAt, messages } = req.body;
+    const { createdAt, messages, summary } = req.body;
 
     const newSession = await prisma.chatSession.create({
       data: {
         createdAt: createdAt ? new Date(createdAt) : new Date(),
+        summary: summary,
         messages: {
           create: messages.map((msg: any) => ({
             role: msg.role,
             content: msg.content,
             model: msg.model,
             timestamp: new Date(msg.timestamp),
-            cost: msg.cost ?? 0.0,
+            cost: msg.cost ?? NaN,
             memos: msg.memos
               ? {
                   create: msg.memos.map((memo: any) => ({

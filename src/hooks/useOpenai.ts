@@ -20,6 +20,7 @@ export interface MessageDetail {
   timestamp: Date;
   inputTokens?: number;
   outputTokens?: number;
+  cost?: number;
 }
 
 const openai = new OpenAI({
