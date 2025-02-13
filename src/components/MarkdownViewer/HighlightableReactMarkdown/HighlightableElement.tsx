@@ -7,6 +7,8 @@ import {
 import { useContainerRef } from '@/contexts/ContainerRefContext';
 import { Box } from '@chakra-ui/react';
 import React from 'react';
+import { PreTag } from '.';
+import { CodeBlock } from '../CodeBlock';
 
 /**
  * HighlightRange
@@ -144,10 +146,6 @@ const wrapText = (
   return segments;
 };
 
-/**
- * Recursively traverses the children and applies wrapText to each text node.
- * currentOffset represents the number of characters processed so far (global offset).
- */
 const wrapChildren = (
   children: React.ReactNode,
   highlightRanges: HighlightRange[],
@@ -161,26 +159,40 @@ const wrapChildren = (
       newChildren.push(...wrapped);
       currentOffset += child.length;
     } else if (React.isValidElement(child)) {
-      // If it's a React element, recursively process child elements to create a clone
-      const childProps = child.props;
-      const result = wrapChildren(
-        childProps.children,
-        highlightRanges,
-        currentOffset,
-      );
-      currentOffset = result.offset;
-      newChildren.push(
-        React.cloneElement(child, {
-          ...childProps,
-          children: result.newChildren,
-        }),
-      );
+      // if the child is a CodeBlock or PreTag, add it as is
+      if (child.type === CodeBlock || child.type === PreTag) {
+        newChildren.push(child);
+        currentOffset += getTextLength(child.props.children);
+      } else {
+        // process other elements recursively
+        const childProps = child.props;
+        const result = wrapChildren(
+          childProps.children,
+          highlightRanges,
+          currentOffset,
+        );
+        currentOffset = result.offset;
+        newChildren.push(
+          React.cloneElement(child, {
+            ...childProps,
+            children: result.newChildren,
+          }),
+        );
+      }
     } else {
       // Other elements are added as is
       newChildren.push(child);
     }
   });
   return { newChildren, offset: currentOffset };
+};
+
+const getTextLength = (node: React.ReactNode): number => {
+  if (typeof node === 'string') return node.length;
+  if (Array.isArray(node))
+    return node.reduce((acc, child) => acc + getTextLength(child), 0);
+  if (React.isValidElement(node)) return getTextLength(node.props.children);
+  return 0;
 };
 
 export const HighlightableElement: React.FC<HighlightableElementProps> = ({

@@ -4,6 +4,7 @@ import { calculateCost, OpenaiModelType } from '@/config/llm-models';
 import { MessageDetail } from '@/hooks/useOpenai';
 
 interface ChatSessionData {
+  id?: number;
   messages: ChatSessionMessage[];
   summary: string;
 }
@@ -40,6 +41,7 @@ export const createChatSessionData = (
   memos: Memos,
   supplementaryMessages: SupplementaryMessages,
   summary: string,
+  id?: number,
 ): ChatSessionData => {
   return {
     messages: messages.map((msg) => {
@@ -118,6 +120,7 @@ export const createChatSessionData = (
       return messageData;
     }),
     summary,
+    id,
   };
 };
 
@@ -140,7 +143,15 @@ export const loadChatSession = async (
   memos: Memos;
   supplementaryMessages: SupplementaryMessages;
 }> => {
-  const res = await fetch(`/api/chat-sessions/${chatSessionId}`);
+  const res = await fetch(`/api/chat-sessions/${chatSessionId}`, {
+    method: 'GET',
+    // // id-designated data can be modified so we need to disable cache
+    // headers: {
+    //   'Cache-Control': 'no-cache, no-store, must-revalidate',
+    //   Pragma: 'no-cache',
+    //   Expires: '0',
+    // },
+  });
   if (!res.ok) {
     throw new Error('Failed to load chat session');
   }
@@ -268,4 +279,17 @@ export const loadChatSessions = async (
   const sessions: ChatSessionListItem[] = await res.json();
 
   return sessions;
+};
+
+export const updateChatSession = async (chatSessionData: ChatSessionData) => {
+  console.log('updateChatSession', chatSessionData);
+  try {
+    await fetch(`/api/chat-sessions/${chatSessionData.id}`, {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify(chatSessionData),
+    });
+  } catch (error) {
+    console.error('Failed to update chat session', error);
+  }
 };

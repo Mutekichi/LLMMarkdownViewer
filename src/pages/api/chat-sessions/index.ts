@@ -95,7 +95,7 @@ const getSession = async (req: NextApiRequest, res: NextApiResponse) => {
           }
         : {}),
       take: takeNum,
-      orderBy: { createdAt: 'desc' },
+      orderBy: { updatedAt: 'desc' },
     });
 
     return res.status(200).json(sessions);
