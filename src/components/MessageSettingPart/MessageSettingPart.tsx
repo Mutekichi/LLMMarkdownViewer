@@ -4,13 +4,13 @@ import { Tooltip } from '@/components/ui/tooltip';
 import { Box, Button, Flex, HStack, Icon } from '@chakra-ui/react';
 import { Dispatch, FC, memo, SetStateAction, useCallback } from 'react';
 import { CiSaveDown1 } from 'react-icons/ci';
+import { GoMail } from 'react-icons/go';
 import { RxTrash } from 'react-icons/rx';
 import {
   OPENAI_MODEL_DISPLAY_NAMES,
   OpenaiModelType,
 } from '../../config/llm-models';
 import { PopoverSelect, PopoverSelectOption } from '../PopoverSelect';
-
 interface MessageSettingPartProps {
   model: string;
   setModel: Dispatch<SetStateAction<OpenaiModelType>>;
@@ -22,6 +22,7 @@ interface MessageSettingPartProps {
   temporaryResetHistory: () => void;
   onSaveButtonClick: () => void;
   onResetButtonClick: () => void;
+  onContactButtonClick: () => void;
 }
 
 const createModelOptions = (): PopoverSelectOption<OpenaiModelType>[] => {
@@ -30,7 +31,7 @@ const createModelOptions = (): PopoverSelectOption<OpenaiModelType>[] => {
     label,
   }));
 };
-
+// MessageSettingPart.tsx
 export const MessageSettingPart: FC<MessageSettingPartProps> = memo((props) => {
   const {
     model,
@@ -43,6 +44,7 @@ export const MessageSettingPart: FC<MessageSettingPartProps> = memo((props) => {
     temporaryResetHistory,
     onSaveButtonClick,
     onResetButtonClick,
+    onContactButtonClick: openContactDialog,
   } = props;
 
   const onTemporaryChatButtonClick = useCallback(() => {
@@ -53,55 +55,104 @@ export const MessageSettingPart: FC<MessageSettingPartProps> = memo((props) => {
   }, [isTemporaryChatOpen]);
 
   return (
-    <HStack w="80%" h="100%" gap={4}>
-      <PopoverSelect
-        options={createModelOptions()}
-        value={model}
-        onChange={setModel}
-        isOpen={isModelSelectPopoverOpen}
-        setIsOpen={setIsModelSelectPopoverOpen}
-        onOpen={() => setIsModelSelectPopoverOpen(true)}
-        onClose={() => setIsModelSelectPopoverOpen(false)}
-        disabled={isLoading}
-        tooltipLabelOnDisabled="You can't change the model while generating."
-      />
-      <Tooltip
-        content="Temporary chat"
-        positioning={{ placement: 'right-end' }}
-        openDelay={100}
-        closeDelay={100}
-      >
-        <HStack
-          h="100%"
-          alignItems="flex-end"
-          pb={2}
-          gap={0}
-          onClick={onTemporaryChatButtonClick}
-          cursor="pointer"
-          borderRadius={10}
-          _hover={{ bgColor: 'blackAlpha.50' }}
-        >
-          <Box
-            display="flex"
-            alignItems="flex-start"
-            h="100%"
-            opacity={isTemporaryChatOpen ? 1 : 0.5}
+    <HStack w="80%" h="100%" justify="space-between">
+      <HStack w="100%" h="100%" gap={4}>
+        <PopoverSelect
+          options={createModelOptions()}
+          value={model}
+          onChange={setModel}
+          isOpen={isModelSelectPopoverOpen}
+          setIsOpen={setIsModelSelectPopoverOpen}
+          onOpen={() => setIsModelSelectPopoverOpen(true)}
+          onClose={() => setIsModelSelectPopoverOpen(false)}
+          disabled={isLoading}
+          tooltipLabelOnDisabled="You can't change the model while generating."
+        />
+        <HStack w="auto" h="100%" gap={4}>
+          <Tooltip
+            content="Temporary chat"
+            positioning={{ placement: 'right-end' }}
+            openDelay={100}
+            closeDelay={100}
           >
-            {/* <img src="/icons/vanish.svg" alt="SVG" width={40} height={40} /> */}
-            <img
-              src="/icons/temporary_chat.svg"
-              alt="SVG"
-              width={40}
-              height={40}
-            />
-          </Box>
-          <Flex justify="flex-end">
-            <Switch size="lg" checked={isTemporaryChatOpen} />
-          </Flex>
+            <HStack
+              h="100%"
+              w="70px"
+              alignItems="flex-end"
+              pb={2}
+              gap={0}
+              onClick={onTemporaryChatButtonClick}
+              cursor="pointer"
+              borderRadius={10}
+              _hover={{ bgColor: 'blackAlpha.50' }}
+            >
+              <Box
+                pt={2}
+                display="flex"
+                alignItems="flex-start"
+                h="100%"
+                opacity={isTemporaryChatOpen ? 1 : 0.5}
+              >
+                <img
+                  src="/icons/temporary_chat.svg"
+                  alt="SVG"
+                  width={30}
+                  height={30}
+                />
+              </Box>
+              <Flex justify="flex-end">
+                <Switch size="md" checked={isTemporaryChatOpen} />
+              </Flex>
+            </HStack>
+          </Tooltip>
+
+          <Tooltip
+            content="Clear all history"
+            positioning={{ placement: 'right-end' }}
+            openDelay={100}
+            closeDelay={100}
+          >
+            <Button
+              display="flex"
+              h="100%"
+              w="70px"
+              bgColor="transparent"
+              opacity={1}
+              px={2}
+              borderRadius={10}
+              _hover={{ bgColor: 'blackAlpha.50' }}
+              onClick={onResetButtonClick}
+            >
+              <Icon as={RxTrash} boxSize={8} color="blackAlpha.800" />
+            </Button>
+          </Tooltip>
+
+          <Tooltip
+            content="Save chat history"
+            positioning={{ placement: 'right-end' }}
+            openDelay={100}
+            closeDelay={100}
+          >
+            <Button
+              display="flex"
+              h="100%"
+              w="70px"
+              bgColor="transparent"
+              opacity={1}
+              px={2}
+              borderRadius={10}
+              _hover={{ bgColor: 'blackAlpha.50' }}
+              onClick={() => {
+                onSaveButtonClick();
+              }}
+            >
+              <Icon as={CiSaveDown1} boxSize={8} color="blackAlpha.800" />
+            </Button>
+          </Tooltip>
         </HStack>
-      </Tooltip>
+      </HStack>
       <Tooltip
-        content="Clear all history"
+        content="Give your feedback"
         positioning={{ placement: 'right-end' }}
         openDelay={100}
         closeDelay={100}
@@ -109,34 +160,17 @@ export const MessageSettingPart: FC<MessageSettingPartProps> = memo((props) => {
         <Button
           display="flex"
           h="100%"
-          w="80px"
+          w="70px"
           bgColor="transparent"
           opacity={1}
           px={2}
           borderRadius={10}
           _hover={{ bgColor: 'blackAlpha.50' }}
-          onClick={onResetButtonClick}
+          onClick={openContactDialog}
         >
-          {/* <img src="/icons/vanish.svg" alt="SVG" width={60} height={60} /> */}
-          <Icon as={RxTrash} boxSize={10} color="blackAlpha.800" />
+          <Icon as={GoMail} boxSize={8} color="blackAlpha.800" />
         </Button>
       </Tooltip>
-      <Button
-        display="flex"
-        h="100%"
-        w="80px"
-        bgColor="transparent"
-        opacity={1}
-        px={2}
-        borderRadius={10}
-        _hover={{ bgColor: 'blackAlpha.50' }}
-        onClick={() => {
-          onSaveButtonClick();
-        }}
-      >
-        {/* <img src="/icons/vanish.svg" alt="SVG" width={60} height={60} /> */}
-        <Icon as={CiSaveDown1} boxSize={10} color="blackAlpha.800" />
-      </Button>
     </HStack>
   );
 });

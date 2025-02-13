@@ -34,22 +34,27 @@ interface ChatSessionMessage {
 
 export default async function handler(
   req: NextApiRequest,
-  res: NextApiResponse<ChatSessionData | { error: string }>,
+  res: NextApiResponse<
+    | ChatSessionData
+    | {
+        error: string;
+      }
+    | void
+  >,
 ) {
+  const { chatSessionId } = req.query;
+
+  if (!chatSessionId || Array.isArray(chatSessionId)) {
+    return res.status(400).json({ error: 'Invalid chatSessionId' });
+  }
+
+  const sessionId = parseInt(chatSessionId, 10);
+  if (isNaN(sessionId)) {
+    return res.status(400).json({ error: 'chatSessionId must be a number' });
+  }
+
   if (req.method === 'GET') {
     try {
-      const { chatSessionId } = req.query;
-      if (!chatSessionId || Array.isArray(chatSessionId)) {
-        return res.status(400).json({ error: 'Invalid chatSessionId' });
-      }
-
-      const sessionId = parseInt(chatSessionId, 10);
-      if (isNaN(sessionId)) {
-        return res
-          .status(400)
-          .json({ error: 'chatSessionId must be a number' });
-      }
-
       const session = await prisma.chatSession.findUnique({
         where: { id: sessionId },
         include: {
@@ -103,8 +108,17 @@ export default async function handler(
     } catch (error: any) {
       return res.status(500).json({ error: error.message });
     }
+  } else if (req.method === 'DELETE') {
+    try {
+      const deletedSession = await prisma.chatSession.delete({
+        where: { id: sessionId },
+      });
+      return res.status(200);
+    } catch (error: any) {
+      return res.status(500).json({ error: error.message });
+    }
   } else {
-    res.setHeader('Allow', 'GET');
+    res.setHeader('Allow', 'GET, DELETE');
     return res.status(405).json({ error: 'Method not allowed' });
   }
 }

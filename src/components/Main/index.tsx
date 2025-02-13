@@ -16,6 +16,7 @@ import {
 } from '@/components/ui/drawer';
 import { Tooltip } from '@/components/ui/tooltip';
 import { useContainerRef } from '@/contexts/ContainerRefContext';
+import { useContactDialog } from '@/hooks/useContactDialog';
 import { MessageDetail, useOpenai } from '@/hooks/useOpenai';
 import {
   ChatSessionListItem,
@@ -150,6 +151,8 @@ const Main: FC = () => {
   const [drawerOpen, setDrawerOpen] = useState(false);
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [inputText, setInputText] = useState('');
+  const { openDialog: openContactDialog, ContactDialog } =
+    useContactDialog('info@example.com');
 
   const renderPopover = useCallback(
     (
@@ -583,8 +586,9 @@ const Main: FC = () => {
   }, [resetHistory, isTemporaryChatOpen, temporaryResetHistory]);
 
   const handleSaveButtonClick = useCallback(() => {
-    setIsSaveDialogOpen(true);
-  }, []);
+    if (messageDetails.length > 1) setIsSaveDialogOpen(true);
+    else alert('No chat history to save.');
+  }, [messageDetails]);
 
   const handleConfirmSave = useCallback(async () => {
     const chatSessionData = createChatSessionData(
@@ -738,7 +742,7 @@ const Main: FC = () => {
         placement="center"
       >
         <DialogContent>
-          <DialogHeader>Save Chat Session</DialogHeader>
+          <DialogHeader fontSize="md">Save Chat Session</DialogHeader>
           <DialogBody>
             <Input
               placeholder="Enter summary..."
@@ -849,6 +853,7 @@ const Main: FC = () => {
           temporaryResetHistory={temporaryResetHistory}
           onSaveButtonClick={handleSaveButtonClick}
           onResetButtonClick={handleResetButtonClick}
+          onContactButtonClick={openContactDialog}
         />
       </VStack>
       <DrawerRoot
@@ -977,6 +982,7 @@ const Main: FC = () => {
           </DrawerBody>
         </DrawerContent>
       </DrawerRoot>
+      {ContactDialog}
     </VStack>
   );
 };
