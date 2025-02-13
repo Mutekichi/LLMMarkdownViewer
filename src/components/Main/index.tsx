@@ -24,6 +24,7 @@ import {
   loadChatSession,
   loadChatSessions,
   saveChatSession,
+  updateChatSession,
 } from '@/lib/chatSessionService';
 import { checkInputLength, excludeSystemMessages } from '@/utils/chatUtils';
 import {
@@ -35,6 +36,7 @@ import {
   Icon,
   Input,
   Text,
+  Textarea,
   VStack,
 } from '@chakra-ui/react';
 import { FC, useCallback, useEffect, useRef, useState } from 'react';
@@ -138,6 +140,7 @@ const Main: FC = () => {
   const [sessionsCursor, setSessionsCursor] = useState<number | null>(null);
   const [isSaveDialogOpen, setIsSaveDialogOpen] = useState(false);
   const [summaryInput, setSummaryInput] = useState('');
+  const [chatSessionId, setChatSessionId] = useState<number | null>(null);
 
   const [highlightedPartInfo, setHighlightedPartInfo] =
     useState<HighlightedPartInfo>({});
@@ -583,26 +586,71 @@ const Main: FC = () => {
     setMemos({});
     setSupplementaryMessages({});
     setHighlightedPartInfo({});
-  }, [resetHistory, isTemporaryChatOpen, temporaryResetHistory]);
+    setDrawerOpen(false);
+    setCurrentSelection(null);
+    setActionType(null);
+    setInputText('');
+    setChatSessionId(null);
+  }, [resetHistory, temporaryResetHistory, isTemporaryChatOpen]);
 
   const handleSaveButtonClick = useCallback(() => {
-    if (messageDetails.length > 1) setIsSaveDialogOpen(true);
-    else alert('No chat history to save.');
+    if (messageDetails.length > 1) {
+      // if the chat is a loaded one, save it directly
+      if (chatSessionId != null) {
+        handleConfirmSave();
+        // otherwise, open the save dialog to enter the summary
+      } else {
+        setIsSaveDialogOpen(true);
+      }
+    } else alert('No chat history to save.');
   }, [messageDetails]);
 
   const handleConfirmSave = useCallback(async () => {
-    const chatSessionData = createChatSessionData(
-      messageDetails,
-      memos,
-      supplementaryMessages,
-      summaryInput,
-    );
+    if (chatSessionId == null) {
+      const chatSessionData = createChatSessionData(
+        messageDetails,
+        memos,
+        supplementaryMessages,
+        summaryInput,
+      );
 
-    await saveChatSession(chatSessionData);
+      await saveChatSession(chatSessionData).then(
+        (res) => {
+          setIsSaveDialogOpen(false);
+          setSummaryInput('');
+        },
+        (err) => {
+          console.error(err);
+        },
+      );
+    } else {
+      const chatSessionData = createChatSessionData(
+        messageDetails,
+        memos,
+        supplementaryMessages,
+        summaryInput,
+        chatSessionId,
+      );
 
-    setIsSaveDialogOpen(false);
-    setSummaryInput('');
-  }, [messageDetails, memos, supplementaryMessages, summaryInput]);
+      await updateChatSession(chatSessionData).then(
+        (res) => {
+          setIsSaveDialogOpen(false);
+          setSummaryInput('');
+          alert('Update successful.');
+        },
+        (err) => {
+          alert('Failed to save chat session.');
+          console.error(err);
+        },
+      );
+    }
+  }, [
+    chatSessionId,
+    messageDetails,
+    memos,
+    supplementaryMessages,
+    summaryInput,
+  ]);
 
   const loadMoreChatSessions = useCallback(async () => {
     const SESSIONS_TO_LOAD_MORE = 10;
@@ -867,7 +915,7 @@ const Main: FC = () => {
           </DrawerHeader>
           <DrawerBody>
             {actionType === 'memo' && (
-              <Input
+              <Textarea
                 placeholder={
                   actionType === 'memo'
                     ? 'Enter memo...'
@@ -875,6 +923,9 @@ const Main: FC = () => {
                 }
                 value={inputText}
                 onChange={(e) => setInputText(e.target.value)}
+                overflowY="auto"
+                h="50vh"
+                resize="none"
               />
             )}
             {actionType === 'explain' && (
@@ -954,7 +1005,18 @@ const Main: FC = () => {
                     _hover={{ bgColor: 'gray.100' }}
                     color="black"
                     key={item.id}
-                    onClick={() => showSession(item.id)}
+                    onClick={() =>
+                      showSession(item.id)
+                        .then(() => {
+                          setChatSessionId(item.id);
+                        })
+                        .catch((err) => {
+                          alert(
+                            'Failed to load chat session data. please retry.',
+                          );
+                          console.error(err);
+                        })
+                    }
                   >
                     <HStack>
                       <Text>{item.summary || 'Unnamed chat'}</Text>

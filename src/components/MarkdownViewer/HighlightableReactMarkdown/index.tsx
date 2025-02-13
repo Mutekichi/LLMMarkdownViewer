@@ -38,7 +38,7 @@ const InlineCode = (props: any) => (
   />
 );
 
-const PreTag = ({ children, ...props }: any) => (
+export const PreTag = ({ children, ...props }: any) => (
   <Box as="pre" {...props}>
     {children}
   </Box>
