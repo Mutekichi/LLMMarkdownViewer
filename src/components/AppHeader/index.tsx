@@ -18,7 +18,6 @@ export const AppHeader: FC<AppHeaderProps> = (props) => {
     <Flex
       as="header"
       w="100%"
-      h="50px"
       alignItems="center"
       justifyContent="space-between"
       color="white"
@@ -27,11 +26,12 @@ export const AppHeader: FC<AppHeaderProps> = (props) => {
       py={2}
     >
       <Button
+        h="50px"
         display="flex"
         bgColor="transparent"
         opacity={1}
-        borderRadius={10}
-        //   _hover={{ bgColor: 'blackAlpha.50' }}
+        borderRadius={8}
+        _hover={{ bgColor: 'gray.300' }}
         onClick={onSidebarIconClick}
       >
         {/* <img src="/icons/vanish.svg" alt="SVG" width={60} height={60} /> */}
@@ -40,11 +40,12 @@ export const AppHeader: FC<AppHeaderProps> = (props) => {
       <Tooltip content="Analytics" positioning={{ placement: 'bottom' }}>
         <DialogTrigger asChild>
           <Button
+            h="50px"
             display="flex"
             bgColor="transparent"
             opacity={1}
-            borderRadius={10}
-            //   _hover={{ bgColor: 'blackAlpha.50' }}
+            borderRadius={8}
+            _hover={{ bgColor: 'gray.300' }}
             onClick={onMenuClick}
           >
             {/* <img src="/icons/vanish.svg" alt="SVG" width={60} height={60} /> */}

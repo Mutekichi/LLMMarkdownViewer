@@ -863,6 +863,7 @@ const Main: FC = () => {
           <DrawerBody>
             <VStack
               gap={2}
+              overflowX="hidden"
               overflowY="auto"
               _scrollbar={{
                 width: '10px',
@@ -884,12 +885,19 @@ const Main: FC = () => {
               >
                 {(item) => (
                   <Button
+                    w="100%"
+                    h="30px"
+                    fontSize="md"
+                    mx={1}
+                    py={6}
                     bgColor="white"
+                    borderRadius={10}
+                    _hover={{ bgColor: 'gray.100' }}
                     color="black"
                     key={item.id}
                     onClick={() => showSession(item.id)}
                   >
-                    {`id: ${item.id} summary: ${item.summary}`}
+                    {item.summary || 'Unnamed chat'}
                   </Button>
                 )}
               </For>
