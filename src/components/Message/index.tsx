@@ -65,7 +65,6 @@ const MessageComponent: FC<MessageProps> = (props) => {
       )}
 
       <Box
-        // position="relative"
         px={style?.hasBorder ? 8 : 2}
         pt={2}
         pb={2}
@@ -76,7 +75,6 @@ const MessageComponent: FC<MessageProps> = (props) => {
             : undefined
         }
         borderRadius={style?.hasBorder ? 20 : undefined}
-        // overflow="hidden"
       >
         <MotionBox
           initial={false}

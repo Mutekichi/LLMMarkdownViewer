@@ -1,7 +1,6 @@
 import { createChatStream } from '@/lib/openaiService';
 import { handleStreamResponse } from '@/lib/streamHandler';
 import { logUsage } from '@/lib/usageServices';
-import OpenAI from 'openai';
 import { useCallback, useEffect, useRef, useState } from 'react';
 import { OpenaiModelType } from '../config/llm-models';
 import { useSystemPrompt } from './useSystemPrompt';
@@ -22,11 +21,6 @@ export interface MessageDetail {
   outputTokens?: number;
   cost?: number;
 }
-
-const openai = new OpenAI({
-  apiKey: process.env.NEXT_PUBLIC_OPENAI_API_KEY,
-  dangerouslyAllowBrowser: true,
-});
 
 export interface UseOpenaiReturn {
   output: string;
@@ -290,4 +284,8 @@ export const useOpenai = (): UseOpenaiReturn => {
     resetHistory,
     temporaryStreamResponse,
   };
+};
+
+export const useMultipleOpenai = (nums: number): UseOpenaiReturn[] => {
+  return Array.from({ length: nums }, (_, i) => useOpenai());
 };

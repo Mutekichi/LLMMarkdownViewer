@@ -7,7 +7,11 @@ import {
   HighlightRange,
   useHighlight,
 } from '@/hooks/useHighlight';
-import { MessageDetail, useOpenai } from '@/hooks/useOpenai';
+import {
+  MessageDetail,
+  useMultipleOpenai,
+  UseOpenaiReturn,
+} from '@/hooks/useOpenai';
 import { useSessions } from '@/hooks/useSessions';
 import {
   createChatSessionData,
@@ -15,15 +19,13 @@ import {
   saveChatSession,
   updateChatSession,
 } from '@/lib/chatSessionService';
-import { checkInputLength, excludeSystemMessages } from '@/utils/chatUtils';
-import { Box, Center, Text, VStack } from '@chakra-ui/react';
+import { Box, Text, VStack } from '@chakra-ui/react';
 import { FC, useCallback, useEffect, useRef, useState } from 'react';
 import { OpenaiModelType } from '../../config/llm-models';
 import { AppHeader } from '../AppHeader';
-import { CustomTextInput } from '../CustomInput';
+import { BottomPart } from '../BottomPart';
 import { LeftDrawer } from '../LeftDrawer';
 import { MessageHistory } from '../MessageHistory';
-import { MessageSettingPart } from '../MessageSettingPart/MessageSettingPart';
 import { RightDrawer } from '../RightDrawer';
 import { SaveSessionDialog } from '../SaveSessionDialog';
 import { SelectionPopover } from '../SelectionPopover';
@@ -58,35 +60,7 @@ export interface CurrentSelection {
 }
 
 const Main: FC = () => {
-  const {
-    output,
-    isLoading,
-    streamResponse,
-    setStopGeneration,
-    chatMessages,
-    setChatMessages,
-    messageDetails,
-    setMessageDetails,
-    resetHistory,
-  } = useOpenai();
-
-  const {
-    output: temporaryOutput,
-    isLoading: temporaryIsLoading,
-    messageDetails: temporaryMessageDetails,
-    resetHistory: temporaryResetHistory,
-    temporaryStreamResponse: temporaryTemporaryStreamResponse,
-  } = useOpenai();
-
-  const {
-    output: explainOutput,
-    isLoading: explainIsLoading,
-    streamResponse: explainStreamResponse,
-    setChatMessages: explainSetChatMessages,
-    messageDetails: explainMessageDetails,
-    setMessageDetails: explainSetMessageDetails,
-    resetHistory: explainResetHistory,
-  } = useOpenai();
+  const [mainOpenai, tempOpenai, explanationOpenai] = useMultipleOpenai(3);
 
   const { containerRef } = useContainerRef();
   const textareaRef = useRef<HTMLTextAreaElement>(null);
@@ -144,9 +118,9 @@ const Main: FC = () => {
           setCurrentSelection={setCurrentSelection}
           setActionType={setActionType}
           setDrawerOpen={setDrawerOpen}
-          chatMessages={chatMessages}
-          explainResetHistory={explainResetHistory}
-          explainSetChatMessages={explainSetChatMessages}
+          chatMessages={mainOpenai.chatMessages}
+          explainResetHistory={explanationOpenai.resetHistory}
+          explainSetChatMessages={explanationOpenai.setChatMessages}
           setTextToExplain={setTextToExplain}
           setShouldStartExplanation={setShouldStartExplanation}
           setInputText={setInputText}
@@ -157,9 +131,8 @@ const Main: FC = () => {
       setCurrentSelection,
       setActionType,
       setDrawerOpen,
-      chatMessages,
-      explainResetHistory,
-      explainSetChatMessages,
+      mainOpenai.chatMessages,
+      explanationOpenai,
       setTextToExplain,
       setShouldStartExplanation,
       setInputText,
@@ -199,7 +172,7 @@ const Main: FC = () => {
         // for the explanation
         // currently dummy messages are added to the beginning of the explainMessageDetails
         // because they are not shown in the MessageHistory component
-        explainSetMessageDetails(supplementaryDetail.supplementary);
+        explanationOpenai.setMessageDetails(supplementaryDetail.supplementary);
         setActionType('explain');
         setInputText('');
         setDrawerOpen(true);
@@ -332,7 +305,7 @@ const Main: FC = () => {
       setSupplementaryMessages((prev) => {
         const supplementaryEntryToAdd: SupplementaryMessageEntry = {
           range: { startOffset, endOffset },
-          supplementary: explainMessageDetails,
+          supplementary: explanationOpenai.messageDetails,
         };
         const oldSupplementaryMessages = prev[msgId]?.[partId] || [];
         const newSupplementaryMessages = [
@@ -350,7 +323,7 @@ const Main: FC = () => {
     setCurrentSelection(null);
     setActionType(null);
     setInputText('');
-  }, [currentSelection, actionType, inputText, explainMessageDetails]);
+  }, [currentSelection, actionType, inputText, explanationOpenai]);
 
   const isNearBottom = useCallback(() => {
     if (containerRef.current) {
@@ -443,22 +416,22 @@ const Main: FC = () => {
           model: msg.model,
           timestamp: new Date(msg.timestamp),
         }));
-        setChatMessages(chatMessages);
+        mainOpenai.setChatMessages(chatMessages);
 
         setMemos(memos);
         setSupplementaryMessages(supplementaryMessages);
-        setMessageDetails(messages);
+        mainOpenai.setChatMessages(chatMessages);
       } else {
         console.error('Failed to load chat session data.');
       }
     },
-    [inputPrompt, setChatMessages, setMessageDetails],
+    [mainOpenai],
   );
 
   const handleResetButtonClick = useCallback(() => {
-    resetHistory();
+    mainOpenai.resetHistory();
     if (isTemporaryChatOpen) {
-      temporaryResetHistory();
+      tempOpenai.resetHistory();
       setIsTemporaryChatOpen(false);
     }
     setMemos({});
@@ -469,10 +442,10 @@ const Main: FC = () => {
     setActionType(null);
     setInputText('');
     setChatSessionId(null);
-  }, [resetHistory, temporaryResetHistory, isTemporaryChatOpen]);
+  }, [mainOpenai, tempOpenai, isTemporaryChatOpen]);
 
   const handleSaveButtonClick = useCallback(() => {
-    if (messageDetails.length > 1) {
+    if (mainOpenai.messageDetails.length > 1) {
       // if the chat is a loaded one, save it directly
       if (chatSessionId != null) {
         handleConfirmSave();
@@ -481,9 +454,11 @@ const Main: FC = () => {
         setIsSaveDialogOpen(true);
       }
     } else alert('No chat history to save.');
-  }, [messageDetails]);
+  }, [mainOpenai.messageDetails]);
 
   const handleConfirmSave = useCallback(async () => {
+    const messageDetails = mainOpenai.messageDetails;
+
     if (chatSessionId == null) {
       const chatSessionData = createChatSessionData(
         messageDetails,
@@ -524,33 +499,34 @@ const Main: FC = () => {
     }
   }, [
     chatSessionId,
-    messageDetails,
+    mainOpenai.messageDetails,
     memos,
     supplementaryMessages,
     summaryInput,
   ]);
 
+  // if shouldStartExplanation changes, start the explanation
   useEffect(() => {
     if (shouldStartExplanation) {
-      explainStreamResponse(
+      explanationOpenai.streamResponse(
         `${textToExplain}の部分について、もう少しだけ詳細に説明してください。`,
         OpenaiModelType.GPT4omini,
       );
       setShouldStartExplanation(false);
     }
-  }, [shouldStartExplanation, textToExplain, explainStreamResponse, model]);
+  }, [shouldStartExplanation, textToExplain, explanationOpenai]);
 
   useEffect(() => {
     // this effect is fired when starting or finishing the generation
     // loading -> not loading means the generation is finished
-    if (!(isLoading || temporaryIsLoading)) {
+    if (!(mainOpenai.isLoading || tempOpenai.isLoading)) {
       scrollDown(true);
       setIsAutoScrollMode(false);
       // not loading -> loading means the generation is starting
     } else {
       setIsAutoScrollMode(true);
     }
-  }, [isLoading, temporaryIsLoading, scrollDown]);
+  }, [mainOpenai.isLoading, tempOpenai.isLoading, scrollDown]);
 
   useEffect(() => {
     if (!isAutoScrollMode) return;
@@ -604,106 +580,40 @@ const Main: FC = () => {
         handleConfirmSave={handleConfirmSave}
       />
 
-      <VStack
-        flex="1"
-        overflowY="auto"
-        w="100%"
-        pb={4}
-        minH="20vh"
-        ref={containerRef}
-        position="relative"
-      >
-        <Box w="80%">
-          <MessageHistory
-            messages={excludeSystemMessages(messageDetails)}
-            streaming={isLoading}
-            streamingMessage={output}
-            highlight={{
-              highlightedPartInfo: highlightedPartInfo,
-              onHighlightedClick: onHighlightedClick,
-              renderPopover: renderPopover,
-            }}
-          />
-        </Box>
-        {isTemporaryChatOpen && (
-          <VStack
-            w="80%"
-            gap={2}
-            justify="space-between"
-            bgColor="blackAlpha.100"
-            flex="1"
-            borderTopRadius={20}
-            border="1"
-            justifyContent="start"
-          >
-            <VStack p={2} gap={0}>
-              <Text fontSize="1.5rem" textAlign="center">
-                Temporary Chat
-              </Text>
-              <Text fontSize="1.2rem" textAlign="center">
-                This conversation does not include any previous chat history and
-                will not be saved.
-              </Text>
-            </VStack>
-            <Box w="80%">
-              <MessageHistory
-                messages={excludeSystemMessages(temporaryMessageDetails)}
-                streaming={temporaryIsLoading}
-                streamingMessage={temporaryOutput}
-                highlight={{
-                  highlightedPartInfo: highlightedPartInfo,
-                  onHighlightedClick: onHighlightedClick,
-                  renderPopover: renderPopover,
-                }}
-              />
-            </Box>
-          </VStack>
-        )}
-      </VStack>
+      <MainChatPart
+        containerRef={containerRef}
+        isTemporaryChatOpen={isTemporaryChatOpen}
+        mainOpenai={mainOpenai}
+        tempOpenai={tempOpenai}
+        highlightedPartInfo={highlightedPartInfo}
+        onHighlightedClick={onHighlightedClick}
+        renderPopover={renderPopover}
+      />
 
-      <VStack w="100%" gap={2} pt={4} justify="space-between" bgColor="#f5f5f5">
-        <Center w="80%">
-          <CustomTextInput
-            textareaRef={textareaRef}
-            onChange={(value) => setInputPrompt(value)}
-            onButtonClick={(value) => {
-              if (isTemporaryChatOpen) {
-                temporaryTemporaryStreamResponse(value, model);
-                setInputPrompt('');
-              } else {
-                streamResponse(value, model);
-                setStopGeneration(false);
-                setInputPrompt('');
-              }
-            }}
-            buttonDisabled={!checkInputLength(inputPrompt)}
-            inputDisabled={isLoading}
-          />
-        </Center>
+      <BottomPart
+        textareaRef={textareaRef}
+        setInputPrompt={setInputPrompt}
+        inputPrompt={inputPrompt}
+        model={model}
+        setModel={setModel}
+        isModelSelectPopoverOpen={isModelSelectPopoverOpen}
+        setIsModelSelectPopoverOpen={setIsModelSelectPopoverOpen}
+        isTemporaryChatOpen={isTemporaryChatOpen}
+        mainOpenai={mainOpenai}
+        tempOpenai={tempOpenai}
+        setIsTemporaryChatOpen={setIsTemporaryChatOpen}
+        handleSaveButtonClick={handleSaveButtonClick}
+        handleResetButtonClick={handleResetButtonClick}
+        openContactDialog={openContactDialog}
+      />
 
-        <MessageSettingPart
-          model={model}
-          setModel={setModel}
-          isModelSelectPopoverOpen={isModelSelectPopoverOpen}
-          setIsModelSelectPopoverOpen={setIsModelSelectPopoverOpen}
-          isLoading={isLoading}
-          isTemporaryChatOpen={isTemporaryChatOpen}
-          setIsTemporaryChatOpen={setIsTemporaryChatOpen}
-          temporaryResetHistory={temporaryResetHistory}
-          onSaveButtonClick={handleSaveButtonClick}
-          onResetButtonClick={handleResetButtonClick}
-          onContactButtonClick={openContactDialog}
-        />
-      </VStack>
       <RightDrawer
         drawerOpen={drawerOpen}
         setDrawerOpen={setDrawerOpen}
         actionType={actionType}
         inputText={inputText}
         setInputText={setInputText}
-        explainIsLoading={explainIsLoading}
-        explainOutput={explainOutput}
-        explainMessageDetails={explainMessageDetails}
+        openai={explanationOpenai}
         currentSelection={currentSelection}
         highlightedPartInfo={highlightedPartInfo}
         handleDrawerDelete={handleDrawerDelete}
@@ -724,3 +634,86 @@ const Main: FC = () => {
 };
 
 export default Main;
+
+interface MainChatPartProps {
+  containerRef: React.RefObject<HTMLDivElement>;
+  isTemporaryChatOpen: boolean;
+  mainOpenai: UseOpenaiReturn;
+  tempOpenai: UseOpenaiReturn;
+  highlightedPartInfo: HighlightedPartInfo;
+  onHighlightedClick: (
+    msgId: string,
+    partId: string,
+    range: HighlightRange,
+  ) => void;
+  renderPopover: (msgId: string, info: any, close: () => void) => JSX.Element;
+}
+
+export const MainChatPart: FC<MainChatPartProps> = (props) => {
+  const {
+    containerRef,
+    isTemporaryChatOpen,
+    mainOpenai,
+    tempOpenai,
+    highlightedPartInfo,
+    onHighlightedClick,
+    renderPopover,
+  } = props;
+
+  return (
+    <VStack
+      flex="1"
+      overflowY="auto"
+      overflowX="hidden"
+      w="100%"
+      pb={4}
+      minH="20vh"
+      ref={containerRef}
+      position="relative"
+    >
+      <Box w={{ base: '100%', md: '80%' }}>
+        <MessageHistory
+          openai={mainOpenai}
+          highlight={{
+            highlightedPartInfo: highlightedPartInfo,
+            onHighlightedClick: onHighlightedClick,
+            renderPopover: renderPopover,
+          }}
+          messagesToSlice={1}
+        />
+      </Box>
+      {isTemporaryChatOpen && (
+        <VStack
+          w="80%"
+          gap={2}
+          justify="space-between"
+          bgColor="blackAlpha.100"
+          flex="1"
+          borderTopRadius={20}
+          border="1"
+          justifyContent="start"
+        >
+          <VStack p={2} gap={0}>
+            <Text fontSize="1.5rem" textAlign="center">
+              Temporary Chat
+            </Text>
+            <Text fontSize="1.2rem" textAlign="center">
+              This conversation does not include any previous chat history and
+              will not be saved.
+            </Text>
+          </VStack>
+          <Box w="80%">
+            <MessageHistory
+              openai={tempOpenai}
+              highlight={{
+                highlightedPartInfo: highlightedPartInfo,
+                onHighlightedClick: onHighlightedClick,
+                renderPopover: renderPopover,
+              }}
+            />
+          </Box>
+        </VStack>
+      )}
+    </VStack>
+  );
+};

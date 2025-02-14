@@ -1,13 +1,11 @@
 import { calculateCost } from '@/config/llm-models';
 import { HighlightedPartInfo, HighlightRange } from '@/hooks/useHighlight';
-import { MessageDetail } from '@/hooks/useOpenai';
+import { MessageDetail, UseOpenaiReturn } from '@/hooks/useOpenai';
 import { Box, HStack, VStack } from '@chakra-ui/react';
 import { FC, memo } from 'react';
 import { Message, MessageStyle } from '../Message/index';
 interface MessageHistoryProps {
-  messages: MessageDetail[];
-  streaming?: boolean;
-  streamingMessage?: string;
+  openai: UseOpenaiReturn;
   highlight?: {
     highlightedPartInfo: { [messageId: string]: any };
     renderPopover: (
@@ -25,6 +23,7 @@ interface MessageHistoryProps {
     hasBorder: boolean;
     canCollapse: boolean;
   };
+  messagesToSlice?: number;
 }
 
 const colors = {
@@ -71,11 +70,7 @@ const Response = memo<ResponseProps>((props) => {
       w="100%"
       justify={responseType === 'user' ? 'flex-end' : 'flex-start'}
     >
-      <Box
-        maxW={responseType === 'user' ? '70%' : '100%'}
-        w={responseType === 'user' ? undefined : '100%'}
-        py={2}
-      >
+      <Box maxW={responseType === 'user' ? '70%' : '100%'} py={2}>
         <Message
           messageId={messageId}
           message={response}
@@ -182,18 +177,25 @@ const PastMessages = memo<{
 
 export const MessageHistory: FC<MessageHistoryProps> = (props) => {
   const {
-    messages,
-    streaming,
-    streamingMessage,
+    openai: {
+      messageDetails: messages,
+      output: streamingMessage,
+      isLoading: streaming,
+    },
     highlight,
     style = {
       hasBorder: true,
       canCollapse: true,
     },
+    messagesToSlice,
   } = props;
   return (
     <VStack align="stretch" p={4} minH="min-content" w="100%">
-      <PastMessages messages={messages} highlight={highlight} style={style} />
+      <PastMessages
+        messages={messagesToSlice ? messages.slice(messagesToSlice) : messages}
+        highlight={highlight}
+        style={style}
+      />
       {streaming && (
         <Response
           messageId="streaming"
