@@ -6,12 +6,17 @@ import { motion } from 'framer-motion';
 import { FC, memo, useState } from 'react';
 import { HighlightedParts } from '../Main';
 import { HighlightRange } from '../MarkdownViewer/HighlightableReactMarkdown/HighlightableElement';
+
+export interface MessageStyle {
+  hasBorder: boolean;
+  canCollapse: boolean;
+}
 interface MessageProps {
   message: string;
   messageId: string;
   bgColor?: string;
   borderColor?: string;
-  hasBorder?: boolean;
+  style?: MessageStyle;
   onSelection?: (info: {
     id: string;
     startOffset: number;
@@ -36,38 +41,42 @@ interface MessageProps {
 const MotionBox = motion(Box);
 
 const MessageComponent: FC<MessageProps> = (props) => {
-  const { message, bgColor, borderColor, hasBorder, highlight } = props;
+  const { message, bgColor, borderColor, highlight, style } = props;
 
   const [isCollapsed, setIsCollapsed] = useState(false);
 
   return (
     <HStack alignItems="flex-start">
-      <Button
-        size="sm"
-        px={0}
-        pt={6}
-        variant="ghost"
-        _hover={{ bg: 'transparent' }}
-        onClick={() => setIsCollapsed(!isCollapsed)}
-      >
-        {
-          <Icon
-            as={isCollapsed ? ChevronUpIcon : ChevronDownIcon}
-            boxSize={5}
-          />
-        }
-      </Button>
+      {style?.canCollapse && (
+        <Button
+          size="sm"
+          px={0}
+          pt={6}
+          variant="ghost"
+          _hover={{ bg: 'transparent' }}
+          onClick={() => setIsCollapsed(!isCollapsed)}
+        >
+          {
+            <Icon
+              as={isCollapsed ? ChevronUpIcon : ChevronDownIcon}
+              boxSize={5}
+            />
+          }
+        </Button>
+      )}
 
       <Box
         // position="relative"
-        px={hasBorder ? 8 : 2}
+        px={style?.hasBorder ? 8 : 2}
         pt={2}
         pb={2}
         bg={bgColor}
         border={
-          hasBorder && borderColor ? `2px solid ${borderColor}` : undefined
+          style?.hasBorder && borderColor
+            ? `2px solid ${borderColor}`
+            : undefined
         }
-        borderRadius={hasBorder ? 20 : undefined}
+        borderRadius={style?.hasBorder ? 20 : undefined}
         // overflow="hidden"
       >
         <MotionBox
