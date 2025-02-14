@@ -7,12 +7,6 @@ import {
   DialogHeader,
   DialogRoot,
 } from '@/components/ui/dialog';
-import {
-  DrawerBody,
-  DrawerContent,
-  DrawerHeader,
-  DrawerRoot,
-} from '@/components/ui/drawer';
 import { Tooltip } from '@/components/ui/tooltip';
 import { useContainerRef } from '@/contexts/ContainerRefContext';
 import { useContactDialog } from '@/hooks/useContactDialog';
@@ -30,7 +24,6 @@ import {
   Box,
   Button,
   Center,
-  For,
   HStack,
   Icon,
   Input,
@@ -40,9 +33,9 @@ import {
 import { FC, useCallback, useEffect, useRef, useState } from 'react';
 import { SlMagnifier, SlPencil } from 'react-icons/sl';
 import { OpenaiModelType } from '../../config/llm-models';
-import { AnalyticsDialog } from '../AnalyticsDialog';
 import { AppHeader } from '../AppHeader';
 import { CustomTextInput } from '../CustomInput';
+import { LeftDrawer } from '../LeftDrawer';
 import { MessageHistory } from '../MessageHistory';
 import { MessageSettingPart } from '../MessageSettingPart/MessageSettingPart';
 import { RightDrawer } from '../RightDrawer';
@@ -739,17 +732,12 @@ const Main: FC = () => {
       position="relative"
       onDoubleClick={handleDoubleClick}
     >
-      {/* we need to wrap AppHeader and AnalyticsDialog in DialogRoot to enable DialogRoot's context */}
-      <DialogRoot
-        open={isAnalyticsOpen}
-        onOpenChange={(e) => setIsAnalyticsOpen(e.open)}
-        size="cover"
-        placement="center"
-        motionPreset="slide-in-bottom"
-      >
-        <AppHeader onSidebarIconClick={() => setSidebarOpen(true)} />
-        <AnalyticsDialog />
-      </DialogRoot>
+      <AppHeader
+        isAnalyticsOpen={isAnalyticsOpen}
+        setIsAnalyticsOpen={setIsAnalyticsOpen}
+        setSidebarOpen={setSidebarOpen}
+        onSidebarIconClick={() => setSidebarOpen(true)}
+      />
 
       <DialogRoot
         open={isSaveDialogOpen}
@@ -886,87 +874,15 @@ const Main: FC = () => {
         handleDrawerDelete={handleDrawerDelete}
         handleDrawerSave={handleDrawerSave}
       />
-      <DrawerRoot
-        open={sidebarOpen}
-        onOpenChange={(e) => setSidebarOpen(e.open)}
-        placement="start"
-      >
-        <DrawerContent>
-          <DrawerHeader fontSize="md">History</DrawerHeader>
-          <DrawerBody>
-            <VStack
-              gap={2}
-              overflowX="hidden"
-              overflowY="auto"
-              _scrollbar={{
-                width: '10px',
-                background: '#000000',
-                backgroundColor: '#000000',
-              }}
-              _scrollbarTrack={{
-                backgroundColor: '#000000',
-              }}
-              _scrollbarThumb={{
-                backgroundColor: '#ffffff',
-              }}
-              pb={4}
-              mb={4}
-            >
-              <For
-                each={sessions}
-                fallback={<Text>No chat sessions found.</Text>}
-              >
-                {(item) => (
-                  <Button
-                    w="100%"
-                    h="30px"
-                    fontSize="md"
-                    mx={1}
-                    py={6}
-                    bgColor="white"
-                    borderRadius={10}
-                    _hover={{ bgColor: 'gray.100' }}
-                    color="black"
-                    key={item.id}
-                    onClick={() =>
-                      showSession(item.id)
-                        .then(() => {
-                          setChatSessionId(item.id);
-                        })
-                        .catch((err) => {
-                          alert(
-                            'Failed to load chat session data. please retry.',
-                          );
-                          console.error(err);
-                        })
-                    }
-                  >
-                    <HStack>
-                      <Text>{item.summary || 'Unnamed chat'}</Text>
-                      <Button
-                        size="xs"
-                        variant="ghost"
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          e.preventDefault();
-                        }}
-                      ></Button>
-                    </HStack>
-                  </Button>
-                )}
-              </For>
-
-              {sessionsCursor != null ? (
-                <Button w="100%" onClick={loadMoreChatSessions}>
-                  Load More
-                </Button>
-              ) : (
-                <Text>No more chat sessions to load.</Text>
-              )}
-            </VStack>
-          </DrawerBody>
-        </DrawerContent>
-      </DrawerRoot>
+      <LeftDrawer
+        sidebarOpen={sidebarOpen}
+        setSidebarOpen={setSidebarOpen}
+        sessions={sessions}
+        showSession={showSession}
+        loadMoreChatSessions={loadMoreChatSessions}
+        sessionsCursor={sessionsCursor}
+        setChatSessionId={setChatSessionId}
+      />
       {ContactDialog}
     </VStack>
   );
