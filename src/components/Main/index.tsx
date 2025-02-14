@@ -954,11 +954,21 @@ const Main: FC = () => {
             >
               Cancel
             </Button>
-            {currentSelection && (
-              <Button colorScheme="red" mr={3} onClick={handleDrawerDelete}>
-                Delete
-              </Button>
-            )}
+            {
+              // only show delete button if the current selection is highlighted
+              currentSelection &&
+                highlightedPartInfo[currentSelection.msgId]?.[
+                  currentSelection.partId
+                ]?.find(
+                  (r) =>
+                    r.startOffset === currentSelection.startOffset &&
+                    r.endOffset === currentSelection.endOffset,
+                ) && (
+                  <Button colorScheme="red" mr={3} onClick={handleDrawerDelete}>
+                    Delete
+                  </Button>
+                )
+            }
             <Button colorScheme="blue" onClick={handleDrawerSave}>
               Save
             </Button>
