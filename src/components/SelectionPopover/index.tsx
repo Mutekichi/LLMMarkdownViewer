@@ -2,29 +2,47 @@
 import { Tooltip } from '@/components/ui/tooltip';
 import { ChatMessage } from '@/hooks/useOpenai';
 import { Button, HStack, Icon } from '@chakra-ui/react';
+import { FC } from 'react';
 import { SlMagnifier, SlPencil } from 'react-icons/sl';
 import { CurrentSelection } from '../Main';
 
-export const SelectionPopover = (
-  msgId: string,
+interface SelectionPopoverProps {
+  msgId: string;
   info: {
     partId: string;
     text?: string;
     absoluteStart: number;
     absoluteEnd: number;
     anchorRect: DOMRect;
-  },
-  close: () => void,
-  setCurrentSelection: (selection: CurrentSelection) => void,
-  setActionType: (actionType: 'memo' | 'explain' | null) => void,
-  setDrawerOpen: (open: boolean) => void,
-  chatMessages: ChatMessage[],
-  explainResetHistory: () => void,
-  explainSetChatMessages: (messages: ChatMessage[]) => void,
-  setTextToExplain: (text: string) => void,
-  setShouldStartExplanation: (shouldStartExplanation: boolean) => void,
-  setInputText: (text: string) => void,
-) => {
+  };
+  close: () => void;
+  setCurrentSelection: (selection: CurrentSelection) => void;
+  setActionType: (actionType: 'memo' | 'explain' | null) => void;
+  setDrawerOpen: (open: boolean) => void;
+  chatMessages: ChatMessage[];
+  explainResetHistory: () => void;
+  explainSetChatMessages: (messages: ChatMessage[]) => void;
+  setTextToExplain: (text: string) => void;
+  setShouldStartExplanation: (shouldStartExplanation: boolean) => void;
+  setInputText: (text: string) => void;
+}
+
+export const SelectionPopover: FC<SelectionPopoverProps> = (props) => {
+  const {
+    msgId,
+    info,
+    close,
+    setCurrentSelection,
+    setActionType,
+    setDrawerOpen,
+    chatMessages,
+    explainResetHistory,
+    explainSetChatMessages,
+    setTextToExplain,
+    setShouldStartExplanation,
+    setInputText,
+  } = props;
+
   return (
     <HStack p={2} w="auto">
       <Tooltip

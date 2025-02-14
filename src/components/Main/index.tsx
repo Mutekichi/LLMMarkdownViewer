@@ -8,11 +8,10 @@ import {
   useHighlight,
 } from '@/hooks/useHighlight';
 import { MessageDetail, useOpenai } from '@/hooks/useOpenai';
+import { useSessions } from '@/hooks/useSessions';
 import {
-  ChatSessionListItem,
   createChatSessionData,
   loadChatSession,
-  loadChatSessions,
   saveChatSession,
   updateChatSession,
 } from '@/lib/chatSessionService';
@@ -104,8 +103,6 @@ const Main: FC = () => {
   const [isAutoScrollMode, setIsAutoScrollMode] = useState(false);
   const [shouldStartExplanation, setShouldStartExplanation] = useState(false);
   const [textToExplain, setTextToExplain] = useState('');
-  const [sessions, setSessions] = useState<ChatSessionListItem[]>([]);
-  const [sessionsCursor, setSessionsCursor] = useState<number | null>(null);
   const [isSaveDialogOpen, setIsSaveDialogOpen] = useState(false);
   const [summaryInput, setSummaryInput] = useState('');
   const [chatSessionId, setChatSessionId] = useState<number | null>(null);
@@ -125,6 +122,8 @@ const Main: FC = () => {
   const { highlightedPartInfo, setHighlightedPartInfo, addHighlightRange } =
     useHighlight();
 
+  const { sessions, loadMoreChatSessions, sessionsCursor } = useSessions();
+
   const renderPopover = useCallback(
     (
       msgId: string,
@@ -137,26 +136,28 @@ const Main: FC = () => {
       },
       close: () => void,
     ) => {
-      return SelectionPopover(
-        msgId,
-        info,
-        close,
-        setCurrentSelection,
-        setActionType,
-        setDrawerOpen,
-        chatMessages,
-        explainResetHistory,
-        explainSetChatMessages,
-        setTextToExplain,
-        setShouldStartExplanation,
-        setInputText,
+      return (
+        <SelectionPopover
+          msgId={msgId}
+          info={info}
+          close={close}
+          setCurrentSelection={setCurrentSelection}
+          setActionType={setActionType}
+          setDrawerOpen={setDrawerOpen}
+          chatMessages={chatMessages}
+          explainResetHistory={explainResetHistory}
+          explainSetChatMessages={explainSetChatMessages}
+          setTextToExplain={setTextToExplain}
+          setShouldStartExplanation={setShouldStartExplanation}
+          setInputText={setInputText}
+        />
       );
     },
     [
-      chatMessages,
       setCurrentSelection,
       setActionType,
       setDrawerOpen,
+      chatMessages,
       explainResetHistory,
       explainSetChatMessages,
       setTextToExplain,
@@ -529,29 +530,6 @@ const Main: FC = () => {
     summaryInput,
   ]);
 
-  const loadMoreChatSessions = useCallback(async () => {
-    const SESSIONS_TO_LOAD_MORE = 10;
-    if (sessionsCursor == null) return;
-
-    try {
-      const more = await loadChatSessions(
-        sessionsCursor,
-        SESSIONS_TO_LOAD_MORE,
-      );
-      setSessions([...sessions, ...more]);
-
-      // if # of loaded session is less than the requested number,
-      // it means there are no more sessions to load, so set the cursor to null
-      if (more.length < SESSIONS_TO_LOAD_MORE) {
-        setSessionsCursor(null);
-      } else {
-        setSessionsCursor(more[more.length - 1].id);
-      }
-    } catch (err) {
-      console.error(err);
-    }
-  }, [sessionsCursor, sessions]);
-
   useEffect(() => {
     if (shouldStartExplanation) {
       explainStreamResponse(
@@ -575,28 +553,10 @@ const Main: FC = () => {
   }, [isLoading, temporaryIsLoading, scrollDown]);
 
   useEffect(() => {
-    const intervalId = setInterval(() => {
-      if (isAutoScrollMode) scrollDown(true);
-    }, 500);
-
-    return () => {
-      clearInterval(intervalId);
-    };
-  }, [isAutoScrollMode, scrollDown]);
-
-  const handleDoubleClick = useCallback(() => {
-    console.log('memos', memos);
-    console.log('supplementaryMessages', supplementaryMessages);
-    console.log('highlightedPartInfo', highlightedPartInfo);
-    console.log('chatMessages', chatMessages);
-    console.log('messageDetails', messageDetails);
-  }, [
-    memos,
-    supplementaryMessages,
-    highlightedPartInfo,
-    chatMessages,
-    messageDetails,
-  ]);
+    if (!isAutoScrollMode) return;
+    const intervalId = setInterval(() => scrollDown(true), 500);
+    return () => clearInterval(intervalId);
+  }, [isAutoScrollMode]);
 
   useEffect(() => {
     if (isTemporaryChatOpen && containerRef.current) scrollDown(false);
@@ -617,21 +577,6 @@ const Main: FC = () => {
     };
   }, []);
 
-  useEffect(() => {
-    (async () => {
-      const SESSIONS_TO_LOAD_FIRST = 30;
-      try {
-        const data = await loadChatSessions(undefined, SESSIONS_TO_LOAD_FIRST);
-        setSessions(data);
-        if (data.length > 0) {
-          setSessionsCursor(data[data.length - 1].id);
-        }
-      } catch (err) {
-        console.error(err);
-      }
-    })();
-  }, []);
-
   return (
     <VStack
       w="100%"
@@ -643,7 +588,6 @@ const Main: FC = () => {
       boxSizing="border-box"
       pb={2}
       position="relative"
-      onDoubleClick={handleDoubleClick}
     >
       <AppHeader
         isAnalyticsOpen={isAnalyticsOpen}
