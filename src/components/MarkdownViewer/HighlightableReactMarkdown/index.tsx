@@ -12,7 +12,7 @@ import {
   RenderPopoverInfo,
 } from './HighlightableElement';
 // import this to prevent double display for formula
-import { HighlightedParts } from '@/components/Main';
+import { HighlightedParts } from '@/hooks/useHighlight';
 import 'katex/dist/katex.min.css';
 
 // Inline styled components

@@ -6,10 +6,11 @@ import {
   DrawerHeader,
   DrawerRoot,
 } from '@/components/ui/drawer';
+import { HighlightedPartInfo } from '@/hooks/useHighlight';
 import { MessageDetail } from '@/hooks/useOpenai';
 import { Button, Text, Textarea, VStack } from '@chakra-ui/react';
 import { FC, memo } from 'react';
-import { CurrentSelection, HighlightedPartInfo } from '../Main';
+import { CurrentSelection } from '../Main';
 import { MessageHistory } from '../MessageHistory';
 
 interface RightDrawerProps {

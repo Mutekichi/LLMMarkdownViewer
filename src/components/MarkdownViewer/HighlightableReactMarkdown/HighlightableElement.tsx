@@ -5,19 +5,11 @@ import {
   PopoverTrigger,
 } from '@/components/ui/popover';
 import { useContainerRef } from '@/contexts/ContainerRefContext';
+import { HighlightRange } from '@/hooks/useHighlight';
 import { Box } from '@chakra-ui/react';
 import React from 'react';
 import { PreTag } from '.';
 import { CodeBlock } from '../CodeBlock';
-
-/**
- * HighlightRange
- * Represents an absolute offset range within the original text.
- */
-export type HighlightRange = {
-  startOffset: number;
-  endOffset: number;
-};
 
 /**
  * PopoverInfo

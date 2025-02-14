@@ -1,11 +1,10 @@
 import { MarkdownViewer } from '@/components/MarkdownViewer';
 import { HighlightableReactMarkdown } from '@/components/MarkdownViewer/HighlightableReactMarkdown';
+import { HighlightedParts, HighlightRange } from '@/hooks/useHighlight';
 import { ChevronDownIcon, ChevronUpIcon } from '@chakra-ui/icons';
 import { Box, Button, HStack, Icon } from '@chakra-ui/react';
 import { motion } from 'framer-motion';
 import { FC, memo, useState } from 'react';
-import { HighlightedParts } from '../Main';
-import { HighlightRange } from '../MarkdownViewer/HighlightableReactMarkdown/HighlightableElement';
 
 export interface MessageStyle {
   hasBorder: boolean;

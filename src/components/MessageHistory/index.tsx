@@ -1,9 +1,8 @@
 import { calculateCost } from '@/config/llm-models';
+import { HighlightedPartInfo, HighlightRange } from '@/hooks/useHighlight';
 import { MessageDetail } from '@/hooks/useOpenai';
 import { Box, HStack, VStack } from '@chakra-ui/react';
 import { FC, memo } from 'react';
-import { HighlightedPartInfo } from '../Main';
-import { HighlightRange } from '../MarkdownViewer/HighlightableReactMarkdown/HighlightableElement';
 import { Message, MessageStyle } from '../Message/index';
 interface MessageHistoryProps {
   messages: MessageDetail[];

@@ -15,7 +15,7 @@ type UseContactDialogReturn = {
   ContactDialog: JSX.Element;
 };
 
-export const useContactDialog = (toEmail: string): UseContactDialogReturn => {
+export const useContactDialog = (): UseContactDialogReturn => {
   const [isOpen, setIsOpen] = useState(false);
   const [inquiryText, setInquiryText] = useState('');
 

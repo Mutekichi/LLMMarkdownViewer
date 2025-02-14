@@ -1,5 +1,4 @@
 'use client';
-import { HighlightRange } from '@/components/MarkdownViewer/HighlightableReactMarkdown/HighlightableElement';
 import {
   DialogBody,
   DialogContent,
@@ -10,6 +9,12 @@ import {
 import { Tooltip } from '@/components/ui/tooltip';
 import { useContainerRef } from '@/contexts/ContainerRefContext';
 import { useContactDialog } from '@/hooks/useContactDialog';
+import {
+  HighlightedPartInfo,
+  HighlightedParts,
+  HighlightRange,
+  useHighlight,
+} from '@/hooks/useHighlight';
 import { MessageDetail, useOpenai } from '@/hooks/useOpenai';
 import {
   ChatSessionListItem,
@@ -40,12 +45,6 @@ import { MessageHistory } from '../MessageHistory';
 import { MessageSettingPart } from '../MessageSettingPart/MessageSettingPart';
 import { RightDrawer } from '../RightDrawer';
 
-export interface HighlightedParts {
-  [partId: string]: HighlightRange[];
-}
-export interface HighlightedPartInfo {
-  [messageId: string]: HighlightedParts;
-}
 export interface MemoEntry {
   range: HighlightRange;
   memo: string;
@@ -127,8 +126,6 @@ const Main: FC = () => {
   const [summaryInput, setSummaryInput] = useState('');
   const [chatSessionId, setChatSessionId] = useState<number | null>(null);
 
-  const [highlightedPartInfo, setHighlightedPartInfo] =
-    useState<HighlightedPartInfo>({});
   const [memos, setMemos] = useState<Memos>({});
   const [supplementaryMessages, setSupplementaryMessages] =
     useState<SupplementaryMessages>({});
@@ -139,8 +136,10 @@ const Main: FC = () => {
   const [drawerOpen, setDrawerOpen] = useState(false);
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [inputText, setInputText] = useState('');
-  const { openDialog: openContactDialog, ContactDialog } =
-    useContactDialog('info@example.com');
+  const { openDialog: openContactDialog, ContactDialog } = useContactDialog();
+
+  const { highlightedPartInfo, setHighlightedPartInfo, addHighlightRange } =
+    useHighlight();
 
   const renderPopover = useCallback(
     (
@@ -234,22 +233,6 @@ const Main: FC = () => {
       );
     },
     [chatMessages],
-  );
-
-  const addHighlightRange = useCallback(
-    (msgId: string, partId: string, range: HighlightRange) => {
-      setHighlightedPartInfo((prev) => {
-        const rangeToAppend: HighlightRange = { ...range };
-
-        const oldRanges = prev[msgId]?.[partId] || [];
-        const newRanges = [...oldRanges, rangeToAppend];
-        return {
-          ...prev,
-          [msgId]: { ...prev[msgId], [partId]: newRanges },
-        };
-      });
-    },
-    [setHighlightedPartInfo],
   );
 
   const onHighlightedClick = useCallback(
