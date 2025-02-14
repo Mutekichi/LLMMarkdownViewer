@@ -10,7 +10,6 @@ import {
 import {
   DrawerBody,
   DrawerContent,
-  DrawerFooter,
   DrawerHeader,
   DrawerRoot,
 } from '@/components/ui/drawer';
@@ -36,7 +35,6 @@ import {
   Icon,
   Input,
   Text,
-  Textarea,
   VStack,
 } from '@chakra-ui/react';
 import { FC, useCallback, useEffect, useRef, useState } from 'react';
@@ -44,9 +42,10 @@ import { SlMagnifier, SlPencil } from 'react-icons/sl';
 import { OpenaiModelType } from '../../config/llm-models';
 import { AnalyticsDialog } from '../AnalyticsDialog';
 import { AppHeader } from '../AppHeader';
-import CustomTextInput from '../CustomInput';
+import { CustomTextInput } from '../CustomInput';
 import { MessageHistory } from '../MessageHistory';
 import { MessageSettingPart } from '../MessageSettingPart/MessageSettingPart';
+import { RightDrawer } from '../RightDrawer';
 
 export interface HighlightedParts {
   [partId: string]: HighlightRange[];
@@ -87,9 +86,7 @@ const Main: FC = () => {
   const {
     output,
     isLoading,
-    error,
     streamResponse,
-    stopGeneration,
     setStopGeneration,
     chatMessages,
     setChatMessages,
@@ -109,11 +106,7 @@ const Main: FC = () => {
   const {
     output: explainOutput,
     isLoading: explainIsLoading,
-    error: explainError,
     streamResponse: explainStreamResponse,
-    stopGeneration: explainStopGeneration,
-    setStopGeneration: explainSetStopGeneration,
-    chatMessages: explainChatMessages,
     setChatMessages: explainSetChatMessages,
     messageDetails: explainMessageDetails,
     setMessageDetails: explainSetMessageDetails,
@@ -260,27 +253,6 @@ const Main: FC = () => {
         return {
           ...prev,
           [msgId]: { ...prev[msgId], [partId]: newRanges },
-        };
-      });
-    },
-    [setHighlightedPartInfo],
-  );
-
-  const removeHighlightRange = useCallback(
-    (msgId: string, partId: string, range: HighlightRange) => {
-      setHighlightedPartInfo((prev) => {
-        const currentHighlightRanges = prev[msgId]?.[partId];
-        // drop the range that is the same as the current selection
-        const newHighlightRanges = currentHighlightRanges.filter(
-          (r) =>
-            !(
-              r.startOffset === range.startOffset &&
-              r.endOffset === range.endOffset
-            ),
-        );
-        return {
-          ...prev,
-          [msgId]: { ...prev[msgId], [partId]: newHighlightRanges },
         };
       });
     },
@@ -748,9 +720,6 @@ const Main: FC = () => {
         if (data.length > 0) {
           setSessionsCursor(data[data.length - 1].id);
         }
-        for (const session of data) {
-          console.log(session);
-        }
       } catch (err) {
         console.error(err);
       }
@@ -903,78 +872,20 @@ const Main: FC = () => {
           onContactButtonClick={openContactDialog}
         />
       </VStack>
-      <DrawerRoot
-        open={drawerOpen}
-        onOpenChange={(e) => setDrawerOpen(e.open)}
-        size={actionType === 'memo' ? 'sm' : 'md'}
-      >
-        <DrawerContent>
-          <DrawerHeader fontSize="md">
-            {actionType === 'memo' ? 'Memo' : 'More about ' + inputText}
-          </DrawerHeader>
-          <DrawerBody>
-            {actionType === 'memo' && (
-              <Textarea
-                placeholder={
-                  actionType === 'memo'
-                    ? 'Enter memo...'
-                    : 'Enter explanation...'
-                }
-                value={inputText}
-                onChange={(e) => setInputText(e.target.value)}
-                overflowY="auto"
-                h="50vh"
-                resize="none"
-              />
-            )}
-            {actionType === 'explain' && (
-              <VStack>
-                <Text fontSize="sm" color="gray.500">
-                  This will be sent to 4o-mini to generate more detailed
-                  explanation.
-                </Text>
-                <MessageHistory
-                  // exclude the system message @/and the prompt for "...について、もう少しだけ簡潔に説明してください。"
-                  messages={explainMessageDetails.slice(2)}
-                  streaming={explainIsLoading}
-                  streamingMessage={explainOutput}
-                  style={{
-                    hasBorder: false,
-                    canCollapse: false,
-                  }}
-                />
-              </VStack>
-            )}
-          </DrawerBody>
-          <DrawerFooter>
-            <Button
-              variant="outline"
-              mr={3}
-              onClick={() => setDrawerOpen(false)}
-            >
-              Cancel
-            </Button>
-            {
-              // only show delete button if the current selection is highlighted
-              currentSelection &&
-                highlightedPartInfo[currentSelection.msgId]?.[
-                  currentSelection.partId
-                ]?.find(
-                  (r) =>
-                    r.startOffset === currentSelection.startOffset &&
-                    r.endOffset === currentSelection.endOffset,
-                ) && (
-                  <Button colorScheme="red" mr={3} onClick={handleDrawerDelete}>
-                    Delete
-                  </Button>
-                )
-            }
-            <Button colorScheme="blue" onClick={handleDrawerSave}>
-              Save
-            </Button>
-          </DrawerFooter>
-        </DrawerContent>
-      </DrawerRoot>
+      <RightDrawer
+        drawerOpen={drawerOpen}
+        setDrawerOpen={setDrawerOpen}
+        actionType={actionType}
+        inputText={inputText}
+        setInputText={setInputText}
+        explainIsLoading={explainIsLoading}
+        explainOutput={explainOutput}
+        explainMessageDetails={explainMessageDetails}
+        currentSelection={currentSelection}
+        highlightedPartInfo={highlightedPartInfo}
+        handleDrawerDelete={handleDrawerDelete}
+        handleDrawerSave={handleDrawerSave}
+      />
       <DrawerRoot
         open={sidebarOpen}
         onOpenChange={(e) => setSidebarOpen(e.open)}
