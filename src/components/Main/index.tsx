@@ -1,12 +1,4 @@
 'use client';
-import {
-  DialogBody,
-  DialogContent,
-  DialogFooter,
-  DialogHeader,
-  DialogRoot,
-} from '@/components/ui/dialog';
-import { Tooltip } from '@/components/ui/tooltip';
 import { useContainerRef } from '@/contexts/ContainerRefContext';
 import { useContactDialog } from '@/hooks/useContactDialog';
 import {
@@ -25,18 +17,8 @@ import {
   updateChatSession,
 } from '@/lib/chatSessionService';
 import { checkInputLength, excludeSystemMessages } from '@/utils/chatUtils';
-import {
-  Box,
-  Button,
-  Center,
-  HStack,
-  Icon,
-  Input,
-  Text,
-  VStack,
-} from '@chakra-ui/react';
+import { Box, Center, Text, VStack } from '@chakra-ui/react';
 import { FC, useCallback, useEffect, useRef, useState } from 'react';
-import { SlMagnifier, SlPencil } from 'react-icons/sl';
 import { OpenaiModelType } from '../../config/llm-models';
 import { AppHeader } from '../AppHeader';
 import { CustomTextInput } from '../CustomInput';
@@ -44,6 +26,8 @@ import { LeftDrawer } from '../LeftDrawer';
 import { MessageHistory } from '../MessageHistory';
 import { MessageSettingPart } from '../MessageSettingPart/MessageSettingPart';
 import { RightDrawer } from '../RightDrawer';
+import { SaveSessionDialog } from '../SaveSessionDialog';
+import { SelectionPopover } from '../SelectionPopover';
 
 export interface MemoEntry {
   range: HighlightRange;
@@ -153,86 +137,32 @@ const Main: FC = () => {
       },
       close: () => void,
     ) => {
-      return (
-        <HStack p={2} w="auto">
-          <Tooltip
-            content="Add memo"
-            positioning={{ placement: 'bottom' }}
-            openDelay={100}
-            closeDelay={100}
-          >
-            <Button
-              display="flex"
-              h="100%"
-              w="auto"
-              bgColor="transparent"
-              opacity={1}
-              px={2}
-              py={1}
-              borderRadius={10}
-              _hover={{ bgColor: 'blackAlpha.50' }}
-              onClick={() => {
-                setCurrentSelection({
-                  msgId,
-                  partId: info.partId,
-                  startOffset: info.absoluteStart,
-                  endOffset: info.absoluteEnd,
-                });
-                setActionType('memo');
-                setDrawerOpen(true);
-                close();
-              }}
-            >
-              <Icon as={SlPencil} boxSize={7} color="blackAlpha.800" />
-            </Button>
-          </Tooltip>
-          <Tooltip
-            content="More details"
-            positioning={{ placement: 'bottom' }}
-            openDelay={100}
-            closeDelay={100}
-          >
-            <Button
-              display="flex"
-              h="100%"
-              w="auto"
-              bgColor="transparent"
-              opacity={1}
-              px={2}
-              py={1}
-              borderRadius={10}
-              _hover={{ bgColor: 'blackAlpha.50' }}
-              onClick={() => {
-                setCurrentSelection({
-                  msgId,
-                  partId: info.partId,
-                  startOffset: info.absoluteStart,
-                  endOffset: info.absoluteEnd,
-                });
-                setActionType('explain');
-                setInputText(
-                  info.text
-                    ? info.text.length > 20
-                      ? info.text.slice(0, 20) + '...'
-                      : info.text
-                    : '',
-                );
-                explainResetHistory();
-                setDrawerOpen(true);
-                close();
-                // TODO: should not include messages after the selected message
-                explainSetChatMessages([...chatMessages]);
-                setTextToExplain(info.text || '');
-                setShouldStartExplanation(true);
-              }}
-            >
-              <Icon as={SlMagnifier} boxSize={7} color="blackAlpha.800" />
-            </Button>
-          </Tooltip>
-        </HStack>
+      return SelectionPopover(
+        msgId,
+        info,
+        close,
+        setCurrentSelection,
+        setActionType,
+        setDrawerOpen,
+        chatMessages,
+        explainResetHistory,
+        explainSetChatMessages,
+        setTextToExplain,
+        setShouldStartExplanation,
+        setInputText,
       );
     },
-    [chatMessages],
+    [
+      chatMessages,
+      setCurrentSelection,
+      setActionType,
+      setDrawerOpen,
+      explainResetHistory,
+      explainSetChatMessages,
+      setTextToExplain,
+      setShouldStartExplanation,
+      setInputText,
+    ],
   );
 
   const onHighlightedClick = useCallback(
@@ -722,35 +652,13 @@ const Main: FC = () => {
         onSidebarIconClick={() => setSidebarOpen(true)}
       />
 
-      <DialogRoot
-        open={isSaveDialogOpen}
-        onOpenChange={(e) => setIsSaveDialogOpen(e.open)}
-        size="md"
-        placement="center"
-      >
-        <DialogContent>
-          <DialogHeader fontSize="md">Save Chat Session</DialogHeader>
-          <DialogBody>
-            <Input
-              placeholder="Enter summary..."
-              value={summaryInput}
-              onChange={(e) => setSummaryInput(e.target.value)}
-            />
-          </DialogBody>
-          <DialogFooter>
-            <Button
-              variant="outline"
-              mr={3}
-              onClick={() => setIsSaveDialogOpen(false)}
-            >
-              Cancel
-            </Button>
-            <Button colorScheme="blue" onClick={handleConfirmSave}>
-              Save
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </DialogRoot>
+      <SaveSessionDialog
+        isSaveDialogOpen={isSaveDialogOpen}
+        setIsSaveDialogOpen={setIsSaveDialogOpen}
+        summaryInput={summaryInput}
+        setSummaryInput={setSummaryInput}
+        handleConfirmSave={handleConfirmSave}
+      />
 
       <VStack
         flex="1"

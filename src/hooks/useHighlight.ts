@@ -14,25 +14,25 @@ export type HighlightRange = {
   endOffset: number;
 };
 
-const [highlightedPartInfo, setHighlightedPartInfo] =
-  useState<HighlightedPartInfo>({});
-
-const addHighlightRange = useCallback(
-  (msgId: string, partId: string, range: HighlightRange) => {
-    setHighlightedPartInfo((prev) => {
-      const rangeToAppend: HighlightRange = { ...range };
-
-      const oldRanges = prev[msgId]?.[partId] || [];
-      const newRanges = [...oldRanges, rangeToAppend];
-      return {
-        ...prev,
-        [msgId]: { ...prev[msgId], [partId]: newRanges },
-      };
-    });
-  },
-  [setHighlightedPartInfo],
-);
-
 export const useHighlight = () => {
+  const [highlightedPartInfo, setHighlightedPartInfo] =
+    useState<HighlightedPartInfo>({});
+
+  const addHighlightRange = useCallback(
+    (msgId: string, partId: string, range: HighlightRange) => {
+      setHighlightedPartInfo((prev) => {
+        const rangeToAppend: HighlightRange = { ...range };
+
+        const oldRanges = prev[msgId]?.[partId] || [];
+        const newRanges = [...oldRanges, rangeToAppend];
+        return {
+          ...prev,
+          [msgId]: { ...prev[msgId], [partId]: newRanges },
+        };
+      });
+    },
+    [setHighlightedPartInfo],
+  );
+
   return { highlightedPartInfo, setHighlightedPartInfo, addHighlightRange };
 };
