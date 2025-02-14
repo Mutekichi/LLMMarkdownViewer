@@ -3,9 +3,7 @@ import { Switch } from '@/components/ui/switch';
 import { Tooltip } from '@/components/ui/tooltip';
 import { Box, Button, Flex, HStack, Icon } from '@chakra-ui/react';
 import { Dispatch, FC, memo, SetStateAction, useCallback } from 'react';
-import { CiSaveDown1 } from 'react-icons/ci';
-import { GoMail } from 'react-icons/go';
-import { RxTrash } from 'react-icons/rx';
+import { SlFolder, SlSupport, SlTrash } from 'react-icons/sl';
 import {
   OPENAI_MODEL_DISPLAY_NAMES,
   OpenaiModelType,
@@ -123,7 +121,7 @@ export const MessageSettingPart: FC<MessageSettingPartProps> = memo((props) => {
               _hover={{ bgColor: 'blackAlpha.50' }}
               onClick={onResetButtonClick}
             >
-              <Icon as={RxTrash} boxSize={8} color="blackAlpha.800" />
+              <Icon as={SlTrash} boxSize={8} color="blackAlpha.800" />
             </Button>
           </Tooltip>
 
@@ -146,7 +144,7 @@ export const MessageSettingPart: FC<MessageSettingPartProps> = memo((props) => {
                 onSaveButtonClick();
               }}
             >
-              <Icon as={CiSaveDown1} boxSize={8} color="blackAlpha.800" />
+              <Icon as={SlFolder} boxSize={8} color="blackAlpha.800" />
             </Button>
           </Tooltip>
         </HStack>
@@ -168,7 +166,7 @@ export const MessageSettingPart: FC<MessageSettingPartProps> = memo((props) => {
           _hover={{ bgColor: 'blackAlpha.50' }}
           onClick={openContactDialog}
         >
-          <Icon as={GoMail} boxSize={8} color="blackAlpha.800" />
+          <Icon as={SlSupport} boxSize={8} color="blackAlpha.800" />
         </Button>
       </Tooltip>
     </HStack>

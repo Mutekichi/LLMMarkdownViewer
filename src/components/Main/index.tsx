@@ -40,8 +40,7 @@ import {
   VStack,
 } from '@chakra-ui/react';
 import { FC, useCallback, useEffect, useRef, useState } from 'react';
-import { HiMagnifyingGlass } from 'react-icons/hi2';
-import { LuPencilLine } from 'react-icons/lu';
+import { SlMagnifier, SlPencil } from 'react-icons/sl';
 import { OpenaiModelType } from '../../config/llm-models';
 import { AnalyticsDialog } from '../AnalyticsDialog';
 import { AppHeader } from '../AppHeader';
@@ -199,7 +198,7 @@ const Main: FC = () => {
                 close();
               }}
             >
-              <Icon as={LuPencilLine} boxSize={8} color="blackAlpha.800" />
+              <Icon as={SlPencil} boxSize={7} color="blackAlpha.800" />
             </Button>
           </Tooltip>
           <Tooltip
@@ -242,7 +241,7 @@ const Main: FC = () => {
                 setShouldStartExplanation(true);
               }}
             >
-              <Icon as={HiMagnifyingGlass} boxSize={8} color="blackAlpha.800" />
+              <Icon as={SlMagnifier} boxSize={7} color="blackAlpha.800" />
             </Button>
           </Tooltip>
         </HStack>
@@ -939,7 +938,10 @@ const Main: FC = () => {
                   messages={explainMessageDetails.slice(2)}
                   streaming={explainIsLoading}
                   streamingMessage={explainOutput}
-                  hasBorder={false}
+                  style={{
+                    hasBorder: false,
+                    canCollapse: false,
+                  }}
                 />
               </VStack>
             )}

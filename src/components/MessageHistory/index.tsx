@@ -4,7 +4,7 @@ import { Box, HStack, VStack } from '@chakra-ui/react';
 import { FC, memo } from 'react';
 import { HighlightedPartInfo } from '../Main';
 import { HighlightRange } from '../MarkdownViewer/HighlightableReactMarkdown/HighlightableElement';
-import { Message } from '../Message/index';
+import { Message, MessageStyle } from '../Message/index';
 interface MessageHistoryProps {
   messages: MessageDetail[];
   streaming?: boolean;
@@ -22,7 +22,10 @@ interface MessageHistoryProps {
       range: HighlightRange,
     ) => void;
   };
-  hasBorder?: boolean;
+  style?: {
+    hasBorder: boolean;
+    canCollapse: boolean;
+  };
 }
 
 const colors = {
@@ -44,8 +47,7 @@ interface ResponseProps {
   responseType: 'user' | 'assistant' | 'error';
   response: string;
   cost?: number;
-  hasBorder?: boolean;
-  isStreaming?: boolean;
+  style?: MessageStyle;
   highlight?: {
     highlightedPartInfo: HighlightedPartInfo;
     renderPopover: (
@@ -63,8 +65,7 @@ interface ResponseProps {
 }
 
 const Response = memo<ResponseProps>((props) => {
-  const { messageId, responseType, response, cost, hasBorder, highlight } =
-    props;
+  const { messageId, responseType, response, cost, style, highlight } = props;
 
   return (
     <HStack
@@ -103,7 +104,7 @@ const Response = memo<ResponseProps>((props) => {
                 }
               : undefined
           }
-          hasBorder={hasBorder}
+          style={style}
         />
         {cost && '$ ' + Number((cost / 1000000).toFixed(6)).toString()}
       </Box>
@@ -126,9 +127,10 @@ const PastMessages = memo<{
       range: HighlightRange,
     ) => void;
   };
+  style?: MessageStyle;
   hasBorder?: boolean;
 }>((props) => {
-  const { messages, highlight, hasBorder } = props;
+  const { messages, highlight, style } = props;
   return (
     <>
       {messages.map((message, index) => (
@@ -172,7 +174,7 @@ const PastMessages = memo<{
                 }
               : undefined
           }
-          hasBorder={hasBorder}
+          style={style}
         />
       ))}
     </>
@@ -185,21 +187,20 @@ export const MessageHistory: FC<MessageHistoryProps> = (props) => {
     streaming,
     streamingMessage,
     highlight,
-    hasBorder = true,
+    style = {
+      hasBorder: true,
+      canCollapse: true,
+    },
   } = props;
   return (
     <VStack align="stretch" p={4} minH="min-content" w="100%">
-      <PastMessages
-        messages={messages}
-        highlight={highlight}
-        hasBorder={hasBorder}
-      />
+      <PastMessages messages={messages} highlight={highlight} style={style} />
       {streaming && (
         <Response
           messageId="streaming"
           responseType="assistant"
           response={streamingMessage || 'Generating...'}
-          hasBorder={hasBorder}
+          style={style}
         />
       )}
     </VStack>
