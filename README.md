@@ -1,4 +1,4 @@
-# ModelMakerFrontend
+# LLMMarkdownViewer
 
 ## Setup
 
