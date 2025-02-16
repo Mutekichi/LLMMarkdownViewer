@@ -1,14 +1,11 @@
 import { calculateCost } from '@/config/llm-models';
-import { MessageDetail } from '@/hooks/useOpenai';
+import { HighlightedPartInfo, HighlightRange } from '@/hooks/useHighlight';
+import { MessageDetail, UseOpenaiReturn } from '@/hooks/useOpenai';
 import { Box, HStack, VStack } from '@chakra-ui/react';
-import { FC, memo } from 'react';
-import { HighlightedPartInfo } from '../Main';
-import { HighlightRange } from '../MarkdownViewer/HighlightableReactMarkdown/HighlightableElement';
+import { FC } from 'react';
 import { Message, MessageStyle } from '../Message/index';
 interface MessageHistoryProps {
-  messages: MessageDetail[];
-  streaming?: boolean;
-  streamingMessage?: string;
+  openai: UseOpenaiReturn;
   highlight?: {
     highlightedPartInfo: { [messageId: string]: any };
     renderPopover: (
@@ -26,6 +23,7 @@ interface MessageHistoryProps {
     hasBorder: boolean;
     canCollapse: boolean;
   };
+  messagesToSlice?: number;
 }
 
 const colors = {
@@ -64,7 +62,7 @@ interface ResponseProps {
   };
 }
 
-const Response = memo<ResponseProps>((props) => {
+const Response: FC<ResponseProps> = (props) => {
   const { messageId, responseType, response, cost, style, highlight } = props;
 
   return (
@@ -72,11 +70,7 @@ const Response = memo<ResponseProps>((props) => {
       w="100%"
       justify={responseType === 'user' ? 'flex-end' : 'flex-start'}
     >
-      <Box
-        maxW={responseType === 'user' ? '70%' : '100%'}
-        w={responseType === 'user' ? undefined : '100%'}
-        py={2}
-      >
+      <Box maxW={responseType === 'user' ? '70%' : '100%'} py={2}>
         <Message
           messageId={messageId}
           message={response}
@@ -110,9 +104,9 @@ const Response = memo<ResponseProps>((props) => {
       </Box>
     </HStack>
   );
-});
+};
 
-const PastMessages = memo<{
+const PastMessages: FC<{
   messages: MessageDetail[];
   highlight?: {
     highlightedPartInfo: { [messageId: string]: any };
@@ -129,7 +123,7 @@ const PastMessages = memo<{
   };
   style?: MessageStyle;
   hasBorder?: boolean;
-}>((props) => {
+}> = (props) => {
   const { messages, highlight, style } = props;
   return (
     <>
@@ -179,22 +173,29 @@ const PastMessages = memo<{
       ))}
     </>
   );
-});
+};
 
 export const MessageHistory: FC<MessageHistoryProps> = (props) => {
   const {
-    messages,
-    streaming,
-    streamingMessage,
+    openai: {
+      messageDetails: messages,
+      output: streamingMessage,
+      isLoading: streaming,
+    },
     highlight,
     style = {
       hasBorder: true,
       canCollapse: true,
     },
+    messagesToSlice,
   } = props;
   return (
     <VStack align="stretch" p={4} minH="min-content" w="100%">
-      <PastMessages messages={messages} highlight={highlight} style={style} />
+      <PastMessages
+        messages={messagesToSlice ? messages.slice(messagesToSlice) : messages}
+        highlight={highlight}
+        style={style}
+      />
       {streaming && (
         <Response
           messageId="streaming"

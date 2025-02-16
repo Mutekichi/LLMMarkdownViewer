@@ -2,7 +2,7 @@
 import { Switch } from '@/components/ui/switch';
 import { Tooltip } from '@/components/ui/tooltip';
 import { Box, Button, Flex, HStack, Icon } from '@chakra-ui/react';
-import { Dispatch, FC, memo, SetStateAction, useCallback } from 'react';
+import { FC, memo, useCallback } from 'react';
 import { SlFolder, SlSupport, SlTrash } from 'react-icons/sl';
 import {
   OPENAI_MODEL_DISPLAY_NAMES,
@@ -10,8 +10,8 @@ import {
 } from '../../config/llm-models';
 import { PopoverSelect, PopoverSelectOption } from '../PopoverSelect';
 interface MessageSettingPartProps {
-  model: string;
-  setModel: Dispatch<SetStateAction<OpenaiModelType>>;
+  model: OpenaiModelType;
+  setModel: (model: OpenaiModelType) => void;
   isModelSelectPopoverOpen: boolean;
   setIsModelSelectPopoverOpen: (isOpen: boolean) => void;
   isLoading: boolean;

@@ -1,11 +1,10 @@
 import { MarkdownViewer } from '@/components/MarkdownViewer';
 import { HighlightableReactMarkdown } from '@/components/MarkdownViewer/HighlightableReactMarkdown';
+import { HighlightedParts, HighlightRange } from '@/hooks/useHighlight';
 import { ChevronDownIcon, ChevronUpIcon } from '@chakra-ui/icons';
 import { Box, Button, HStack, Icon } from '@chakra-ui/react';
 import { motion } from 'framer-motion';
-import { FC, memo, useState } from 'react';
-import { HighlightedParts } from '../Main';
-import { HighlightRange } from '../MarkdownViewer/HighlightableReactMarkdown/HighlightableElement';
+import { FC, useState } from 'react';
 
 export interface MessageStyle {
   hasBorder: boolean;
@@ -39,8 +38,7 @@ interface MessageProps {
 }
 
 const MotionBox = motion(Box);
-
-const MessageComponent: FC<MessageProps> = (props) => {
+export const Message: FC<MessageProps> = (props) => {
   const { message, bgColor, borderColor, highlight, style } = props;
 
   const [isCollapsed, setIsCollapsed] = useState(false);
@@ -66,7 +64,6 @@ const MessageComponent: FC<MessageProps> = (props) => {
       )}
 
       <Box
-        // position="relative"
         px={style?.hasBorder ? 8 : 2}
         pt={2}
         pb={2}
@@ -77,7 +74,6 @@ const MessageComponent: FC<MessageProps> = (props) => {
             : undefined
         }
         borderRadius={style?.hasBorder ? 20 : undefined}
-        // overflow="hidden"
       >
         <MotionBox
           initial={false}
@@ -105,5 +101,3 @@ const MessageComponent: FC<MessageProps> = (props) => {
     </HStack>
   );
 };
-
-export const Message = memo(MessageComponent);

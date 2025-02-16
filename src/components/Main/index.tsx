@@ -1,59 +1,35 @@
 'use client';
-import { HighlightRange } from '@/components/MarkdownViewer/HighlightableReactMarkdown/HighlightableElement';
-import {
-  DialogBody,
-  DialogContent,
-  DialogFooter,
-  DialogHeader,
-  DialogRoot,
-} from '@/components/ui/dialog';
-import {
-  DrawerBody,
-  DrawerContent,
-  DrawerFooter,
-  DrawerHeader,
-  DrawerRoot,
-} from '@/components/ui/drawer';
-import { Tooltip } from '@/components/ui/tooltip';
 import { useContainerRef } from '@/contexts/ContainerRefContext';
 import { useContactDialog } from '@/hooks/useContactDialog';
-import { MessageDetail, useOpenai } from '@/hooks/useOpenai';
 import {
-  ChatSessionListItem,
+  HighlightedPartInfo,
+  HighlightedParts,
+  HighlightRange,
+  useHighlight,
+} from '@/hooks/useHighlight';
+import {
+  MessageDetail,
+  useMultipleOpenai,
+  UseOpenaiReturn,
+} from '@/hooks/useOpenai';
+import { useSessions } from '@/hooks/useSessions';
+import {
   createChatSessionData,
   loadChatSession,
-  loadChatSessions,
   saveChatSession,
   updateChatSession,
 } from '@/lib/chatSessionService';
-import { checkInputLength, excludeSystemMessages } from '@/utils/chatUtils';
-import {
-  Box,
-  Button,
-  Center,
-  For,
-  HStack,
-  Icon,
-  Input,
-  Text,
-  Textarea,
-  VStack,
-} from '@chakra-ui/react';
+import { Box, Text, VStack } from '@chakra-ui/react';
 import { FC, useCallback, useEffect, useRef, useState } from 'react';
-import { SlMagnifier, SlPencil } from 'react-icons/sl';
 import { OpenaiModelType } from '../../config/llm-models';
-import { AnalyticsDialog } from '../AnalyticsDialog';
 import { AppHeader } from '../AppHeader';
-import CustomTextInput from '../CustomInput';
+import { BottomPart } from '../BottomPart';
+import { LeftDrawer } from '../LeftDrawer';
 import { MessageHistory } from '../MessageHistory';
-import { MessageSettingPart } from '../MessageSettingPart/MessageSettingPart';
+import { RightDrawer } from '../RightDrawer';
+import { SaveSessionDialog } from '../SaveSessionDialog';
+import { SelectionPopover } from '../SelectionPopover';
 
-export interface HighlightedParts {
-  [partId: string]: HighlightRange[];
-}
-export interface HighlightedPartInfo {
-  [messageId: string]: HighlightedParts;
-}
 export interface MemoEntry {
   range: HighlightRange;
   memo: string;
@@ -84,41 +60,7 @@ export interface CurrentSelection {
 }
 
 const Main: FC = () => {
-  const {
-    output,
-    isLoading,
-    error,
-    streamResponse,
-    stopGeneration,
-    setStopGeneration,
-    chatMessages,
-    setChatMessages,
-    messageDetails,
-    setMessageDetails,
-    resetHistory,
-  } = useOpenai();
-
-  const {
-    output: temporaryOutput,
-    isLoading: temporaryIsLoading,
-    messageDetails: temporaryMessageDetails,
-    resetHistory: temporaryResetHistory,
-    temporaryStreamResponse: temporaryTemporaryStreamResponse,
-  } = useOpenai();
-
-  const {
-    output: explainOutput,
-    isLoading: explainIsLoading,
-    error: explainError,
-    streamResponse: explainStreamResponse,
-    stopGeneration: explainStopGeneration,
-    setStopGeneration: explainSetStopGeneration,
-    chatMessages: explainChatMessages,
-    setChatMessages: explainSetChatMessages,
-    messageDetails: explainMessageDetails,
-    setMessageDetails: explainSetMessageDetails,
-    resetHistory: explainResetHistory,
-  } = useOpenai();
+  const [mainOpenai, tempOpenai, explanationOpenai] = useMultipleOpenai(3);
 
   const { containerRef } = useContainerRef();
   const textareaRef = useRef<HTMLTextAreaElement>(null);
@@ -135,14 +77,10 @@ const Main: FC = () => {
   const [isAutoScrollMode, setIsAutoScrollMode] = useState(false);
   const [shouldStartExplanation, setShouldStartExplanation] = useState(false);
   const [textToExplain, setTextToExplain] = useState('');
-  const [sessions, setSessions] = useState<ChatSessionListItem[]>([]);
-  const [sessionsCursor, setSessionsCursor] = useState<number | null>(null);
   const [isSaveDialogOpen, setIsSaveDialogOpen] = useState(false);
   const [summaryInput, setSummaryInput] = useState('');
   const [chatSessionId, setChatSessionId] = useState<number | null>(null);
 
-  const [highlightedPartInfo, setHighlightedPartInfo] =
-    useState<HighlightedPartInfo>({});
   const [memos, setMemos] = useState<Memos>({});
   const [supplementaryMessages, setSupplementaryMessages] =
     useState<SupplementaryMessages>({});
@@ -153,8 +91,12 @@ const Main: FC = () => {
   const [drawerOpen, setDrawerOpen] = useState(false);
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const [inputText, setInputText] = useState('');
-  const { openDialog: openContactDialog, ContactDialog } =
-    useContactDialog('info@example.com');
+  const { openDialog: openContactDialog, ContactDialog } = useContactDialog();
+
+  const { highlightedPartInfo, setHighlightedPartInfo, addHighlightRange } =
+    useHighlight();
+
+  const { sessions, loadMoreChatSessions, sessionsCursor } = useSessions();
 
   const renderPopover = useCallback(
     (
@@ -169,122 +111,32 @@ const Main: FC = () => {
       close: () => void,
     ) => {
       return (
-        <HStack p={2} w="auto">
-          <Tooltip
-            content="Add memo"
-            positioning={{ placement: 'bottom' }}
-            openDelay={100}
-            closeDelay={100}
-          >
-            <Button
-              display="flex"
-              h="100%"
-              w="auto"
-              bgColor="transparent"
-              opacity={1}
-              px={2}
-              py={1}
-              borderRadius={10}
-              _hover={{ bgColor: 'blackAlpha.50' }}
-              onClick={() => {
-                setCurrentSelection({
-                  msgId,
-                  partId: info.partId,
-                  startOffset: info.absoluteStart,
-                  endOffset: info.absoluteEnd,
-                });
-                setActionType('memo');
-                setDrawerOpen(true);
-                close();
-              }}
-            >
-              <Icon as={SlPencil} boxSize={7} color="blackAlpha.800" />
-            </Button>
-          </Tooltip>
-          <Tooltip
-            content="More details"
-            positioning={{ placement: 'bottom' }}
-            openDelay={100}
-            closeDelay={100}
-          >
-            <Button
-              display="flex"
-              h="100%"
-              w="auto"
-              bgColor="transparent"
-              opacity={1}
-              px={2}
-              py={1}
-              borderRadius={10}
-              _hover={{ bgColor: 'blackAlpha.50' }}
-              onClick={() => {
-                setCurrentSelection({
-                  msgId,
-                  partId: info.partId,
-                  startOffset: info.absoluteStart,
-                  endOffset: info.absoluteEnd,
-                });
-                setActionType('explain');
-                setInputText(
-                  info.text
-                    ? info.text.length > 20
-                      ? info.text.slice(0, 20) + '...'
-                      : info.text
-                    : '',
-                );
-                explainResetHistory();
-                setDrawerOpen(true);
-                close();
-                // TODO: should not include messages after the selected message
-                explainSetChatMessages([...chatMessages]);
-                setTextToExplain(info.text || '');
-                setShouldStartExplanation(true);
-              }}
-            >
-              <Icon as={SlMagnifier} boxSize={7} color="blackAlpha.800" />
-            </Button>
-          </Tooltip>
-        </HStack>
+        <SelectionPopover
+          msgId={msgId}
+          info={info}
+          close={close}
+          setCurrentSelection={setCurrentSelection}
+          setActionType={setActionType}
+          setDrawerOpen={setDrawerOpen}
+          chatMessages={mainOpenai.chatMessages}
+          explainResetHistory={explanationOpenai.resetHistory}
+          explainSetChatMessages={explanationOpenai.setChatMessages}
+          setTextToExplain={setTextToExplain}
+          setShouldStartExplanation={setShouldStartExplanation}
+          setInputText={setInputText}
+        />
       );
     },
-    [chatMessages],
-  );
-
-  const addHighlightRange = useCallback(
-    (msgId: string, partId: string, range: HighlightRange) => {
-      setHighlightedPartInfo((prev) => {
-        const rangeToAppend: HighlightRange = { ...range };
-
-        const oldRanges = prev[msgId]?.[partId] || [];
-        const newRanges = [...oldRanges, rangeToAppend];
-        return {
-          ...prev,
-          [msgId]: { ...prev[msgId], [partId]: newRanges },
-        };
-      });
-    },
-    [setHighlightedPartInfo],
-  );
-
-  const removeHighlightRange = useCallback(
-    (msgId: string, partId: string, range: HighlightRange) => {
-      setHighlightedPartInfo((prev) => {
-        const currentHighlightRanges = prev[msgId]?.[partId];
-        // drop the range that is the same as the current selection
-        const newHighlightRanges = currentHighlightRanges.filter(
-          (r) =>
-            !(
-              r.startOffset === range.startOffset &&
-              r.endOffset === range.endOffset
-            ),
-        );
-        return {
-          ...prev,
-          [msgId]: { ...prev[msgId], [partId]: newHighlightRanges },
-        };
-      });
-    },
-    [setHighlightedPartInfo],
+    [
+      setCurrentSelection,
+      setActionType,
+      setDrawerOpen,
+      mainOpenai.chatMessages,
+      explanationOpenai,
+      setTextToExplain,
+      setShouldStartExplanation,
+      setInputText,
+    ],
   );
 
   const onHighlightedClick = useCallback(
@@ -320,7 +172,7 @@ const Main: FC = () => {
         // for the explanation
         // currently dummy messages are added to the beginning of the explainMessageDetails
         // because they are not shown in the MessageHistory component
-        explainSetMessageDetails(supplementaryDetail.supplementary);
+        explanationOpenai.setMessageDetails(supplementaryDetail.supplementary);
         setActionType('explain');
         setInputText('');
         setDrawerOpen(true);
@@ -453,7 +305,7 @@ const Main: FC = () => {
       setSupplementaryMessages((prev) => {
         const supplementaryEntryToAdd: SupplementaryMessageEntry = {
           range: { startOffset, endOffset },
-          supplementary: explainMessageDetails,
+          supplementary: explanationOpenai.messageDetails,
         };
         const oldSupplementaryMessages = prev[msgId]?.[partId] || [];
         const newSupplementaryMessages = [
@@ -471,7 +323,7 @@ const Main: FC = () => {
     setCurrentSelection(null);
     setActionType(null);
     setInputText('');
-  }, [currentSelection, actionType, inputText, explainMessageDetails]);
+  }, [currentSelection, actionType, inputText, explanationOpenai]);
 
   const isNearBottom = useCallback(() => {
     if (containerRef.current) {
@@ -564,22 +416,22 @@ const Main: FC = () => {
           model: msg.model,
           timestamp: new Date(msg.timestamp),
         }));
-        setChatMessages(chatMessages);
+        mainOpenai.setChatMessages(chatMessages);
 
         setMemos(memos);
         setSupplementaryMessages(supplementaryMessages);
-        setMessageDetails(messages);
+        mainOpenai.setMessageDetails(chatSessionData.messages);
       } else {
         console.error('Failed to load chat session data.');
       }
     },
-    [inputPrompt, setChatMessages, setMessageDetails],
+    [mainOpenai],
   );
 
   const handleResetButtonClick = useCallback(() => {
-    resetHistory();
+    mainOpenai.resetHistory();
     if (isTemporaryChatOpen) {
-      temporaryResetHistory();
+      tempOpenai.resetHistory();
       setIsTemporaryChatOpen(false);
     }
     setMemos({});
@@ -590,10 +442,10 @@ const Main: FC = () => {
     setActionType(null);
     setInputText('');
     setChatSessionId(null);
-  }, [resetHistory, temporaryResetHistory, isTemporaryChatOpen]);
+  }, [mainOpenai, tempOpenai, isTemporaryChatOpen]);
 
   const handleSaveButtonClick = useCallback(() => {
-    if (messageDetails.length > 1) {
+    if (mainOpenai.messageDetails.length > 1) {
       // if the chat is a loaded one, save it directly
       if (chatSessionId != null) {
         handleConfirmSave();
@@ -602,9 +454,11 @@ const Main: FC = () => {
         setIsSaveDialogOpen(true);
       }
     } else alert('No chat history to save.');
-  }, [messageDetails]);
+  }, [mainOpenai.messageDetails]);
 
   const handleConfirmSave = useCallback(async () => {
+    const messageDetails = mainOpenai.messageDetails;
+
     if (chatSessionId == null) {
       const chatSessionData = createChatSessionData(
         messageDetails,
@@ -645,80 +499,40 @@ const Main: FC = () => {
     }
   }, [
     chatSessionId,
-    messageDetails,
+    mainOpenai.messageDetails,
     memos,
     supplementaryMessages,
     summaryInput,
   ]);
 
-  const loadMoreChatSessions = useCallback(async () => {
-    const SESSIONS_TO_LOAD_MORE = 10;
-    if (sessionsCursor == null) return;
-
-    try {
-      const more = await loadChatSessions(
-        sessionsCursor,
-        SESSIONS_TO_LOAD_MORE,
-      );
-      setSessions([...sessions, ...more]);
-
-      // if # of loaded session is less than the requested number,
-      // it means there are no more sessions to load, so set the cursor to null
-      if (more.length < SESSIONS_TO_LOAD_MORE) {
-        setSessionsCursor(null);
-      } else {
-        setSessionsCursor(more[more.length - 1].id);
-      }
-    } catch (err) {
-      console.error(err);
-    }
-  }, [sessionsCursor, sessions]);
-
+  // if shouldStartExplanation changes, start the explanation
   useEffect(() => {
     if (shouldStartExplanation) {
-      explainStreamResponse(
+      explanationOpenai.streamResponse(
         `${textToExplain}の部分について、もう少しだけ詳細に説明してください。`,
         OpenaiModelType.GPT4omini,
       );
       setShouldStartExplanation(false);
     }
-  }, [shouldStartExplanation, textToExplain, explainStreamResponse, model]);
+  }, [shouldStartExplanation, textToExplain, explanationOpenai]);
 
   useEffect(() => {
     // this effect is fired when starting or finishing the generation
     // loading -> not loading means the generation is finished
-    if (!(isLoading || temporaryIsLoading)) {
+    if (!(mainOpenai.isLoading || tempOpenai.isLoading)) {
       scrollDown(true);
       setIsAutoScrollMode(false);
       // not loading -> loading means the generation is starting
     } else {
       setIsAutoScrollMode(true);
     }
-  }, [isLoading, temporaryIsLoading, scrollDown]);
+  }, [mainOpenai.isLoading, tempOpenai.isLoading, scrollDown]);
 
   useEffect(() => {
-    const intervalId = setInterval(() => {
-      if (isAutoScrollMode) scrollDown(true);
-    }, 500);
-
-    return () => {
-      clearInterval(intervalId);
-    };
-  }, [isAutoScrollMode, scrollDown]);
-
-  const handleDoubleClick = useCallback(() => {
-    console.log('memos', memos);
-    console.log('supplementaryMessages', supplementaryMessages);
-    console.log('highlightedPartInfo', highlightedPartInfo);
-    console.log('chatMessages', chatMessages);
-    console.log('messageDetails', messageDetails);
-  }, [
-    memos,
-    supplementaryMessages,
-    highlightedPartInfo,
-    chatMessages,
-    messageDetails,
-  ]);
+    if (!isAutoScrollMode) return;
+    const intervalId = setInterval(() => scrollDown(true), 500);
+    return () => clearInterval(intervalId);
+  }, [isAutoScrollMode]);
 
   useEffect(() => {
     if (isTemporaryChatOpen && containerRef.current) scrollDown(false);
@@ -739,24 +553,6 @@ const Main: FC = () => {
     };
   }, []);
 
-  useEffect(() => {
-    (async () => {
-      const SESSIONS_TO_LOAD_FIRST = 30;
-      try {
-        const data = await loadChatSessions(undefined, SESSIONS_TO_LOAD_FIRST);
-        setSessions(data);
-        if (data.length > 0) {
-          setSessionsCursor(data[data.length - 1].id);
-        }
-        for (const session of data) {
-          console.log(session);
-        }
-      } catch (err) {
-        console.error(err);
-      }
-    })();
-  }, []);
-
   return (
     <VStack
       w="100%"
@@ -768,297 +564,166 @@ const Main: FC = () => {
       boxSizing="border-box"
       pb={2}
       position="relative"
-      onDoubleClick={handleDoubleClick}
     >
-      {/* we need to wrap AppHeader and AnalyticsDialog in DialogRoot to enable DialogRoot's context */}
-      <DialogRoot
-        open={isAnalyticsOpen}
-        onOpenChange={(e) => setIsAnalyticsOpen(e.open)}
-        size="cover"
-        placement="center"
-        motionPreset="slide-in-bottom"
-      >
-        <AppHeader onSidebarIconClick={() => setSidebarOpen(true)} />
-        <AnalyticsDialog />
-      </DialogRoot>
+      <AppHeader
+        isAnalyticsOpen={isAnalyticsOpen}
+        setIsAnalyticsOpen={setIsAnalyticsOpen}
+        setSidebarOpen={setSidebarOpen}
+        onSidebarIconClick={() => setSidebarOpen(true)}
+      />
 
-      <DialogRoot
-        open={isSaveDialogOpen}
-        onOpenChange={(e) => setIsSaveDialogOpen(e.open)}
-        size="md"
-        placement="center"
-      >
-        <DialogContent>
-          <DialogHeader fontSize="md">Save Chat Session</DialogHeader>
-          <DialogBody>
-            <Input
-              placeholder="Enter summary..."
-              value={summaryInput}
-              onChange={(e) => setSummaryInput(e.target.value)}
-            />
-          </DialogBody>
-          <DialogFooter>
-            <Button
-              variant="outline"
-              mr={3}
-              onClick={() => setIsSaveDialogOpen(false)}
-            >
-              Cancel
-            </Button>
-            <Button colorScheme="blue" onClick={handleConfirmSave}>
-              Save
-            </Button>
-          </DialogFooter>
-        </DialogContent>
-      </DialogRoot>
+      <SaveSessionDialog
+        isSaveDialogOpen={isSaveDialogOpen}
+        setIsSaveDialogOpen={setIsSaveDialogOpen}
+        summaryInput={summaryInput}
+        setSummaryInput={setSummaryInput}
+        handleConfirmSave={handleConfirmSave}
+      />
 
-      <VStack
-        flex="1"
-        overflowY="auto"
-        w="100%"
-        pb={4}
-        minH="20vh"
-        ref={containerRef}
-        position="relative"
-      >
-        <Box w="80%">
-          <MessageHistory
-            messages={excludeSystemMessages(messageDetails)}
-            streaming={isLoading}
-            streamingMessage={output}
-            highlight={{
-              highlightedPartInfo: highlightedPartInfo,
-              onHighlightedClick: onHighlightedClick,
-              renderPopover: renderPopover,
-            }}
-          />
-        </Box>
-        {isTemporaryChatOpen && (
-          <VStack
-            w="80%"
-            gap={2}
-            justify="space-between"
-            bgColor="blackAlpha.100"
-            flex="1"
-            borderTopRadius={20}
-            border="1"
-            justifyContent="start"
-          >
-            <VStack p={2} gap={0}>
-              <Text fontSize="1.5rem" textAlign="center">
-                Temporary Chat
-              </Text>
-              <Text fontSize="1.2rem" textAlign="center">
-                This conversation does not include any previous chat history and
-                will not be saved.
-              </Text>
-            </VStack>
-            <Box w="80%">
-              <MessageHistory
-                messages={excludeSystemMessages(temporaryMessageDetails)}
-                streaming={temporaryIsLoading}
-                streamingMessage={temporaryOutput}
-                highlight={{
-                  highlightedPartInfo: highlightedPartInfo,
-                  onHighlightedClick: onHighlightedClick,
-                  renderPopover: renderPopover,
-                }}
-              />
-            </Box>
-          </VStack>
-        )}
-      </VStack>
+      <MainChatPart
+        containerRef={containerRef}
+        isTemporaryChatOpen={isTemporaryChatOpen}
+        mainOpenai={mainOpenai}
+        tempOpenai={tempOpenai}
+        highlightedPartInfo={highlightedPartInfo}
+        onHighlightedClick={onHighlightedClick}
+        renderPopover={renderPopover}
+      />
 
-      <VStack w="100%" gap={2} pt={4} justify="space-between" bgColor="#f5f5f5">
-        <Center w="80%">
-          <CustomTextInput
-            textareaRef={textareaRef}
-            onChange={(value) => setInputPrompt(value)}
-            onButtonClick={(value) => {
-              if (isTemporaryChatOpen) {
-                temporaryTemporaryStreamResponse(value, model);
-                setInputPrompt('');
-              } else {
-                streamResponse(value, model);
-                setStopGeneration(false);
-                setInputPrompt('');
-              }
-            }}
-            buttonDisabled={!checkInputLength(inputPrompt)}
-            inputDisabled={isLoading}
-          />
-        </Center>
+      <BottomPart
+        textareaRef={textareaRef}
+        setInputPrompt={setInputPrompt}
+        inputPrompt={inputPrompt}
+        model={model}
+        setModel={setModel}
+        isModelSelectPopoverOpen={isModelSelectPopoverOpen}
+        setIsModelSelectPopoverOpen={setIsModelSelectPopoverOpen}
+        isTemporaryChatOpen={isTemporaryChatOpen}
+        mainOpenai={mainOpenai}
+        tempOpenai={tempOpenai}
+        setIsTemporaryChatOpen={setIsTemporaryChatOpen}
+        handleSaveButtonClick={handleSaveButtonClick}
+        handleResetButtonClick={handleResetButtonClick}
+        openContactDialog={openContactDialog}
+      />
 
-        <MessageSettingPart
-          model={model}
-          setModel={setModel}
-          isModelSelectPopoverOpen={isModelSelectPopoverOpen}
-          setIsModelSelectPopoverOpen={setIsModelSelectPopoverOpen}
-          isLoading={isLoading}
-          isTemporaryChatOpen={isTemporaryChatOpen}
-          setIsTemporaryChatOpen={setIsTemporaryChatOpen}
-          temporaryResetHistory={temporaryResetHistory}
-          onSaveButtonClick={handleSaveButtonClick}
-          onResetButtonClick={handleResetButtonClick}
-          onContactButtonClick={openContactDialog}
-        />
-      </VStack>
-      <DrawerRoot
-        open={drawerOpen}
-        onOpenChange={(e) => setDrawerOpen(e.open)}
-        size={actionType === 'memo' ? 'sm' : 'md'}
-      >
-        <DrawerContent>
-          <DrawerHeader fontSize="md">
-            {actionType === 'memo' ? 'Memo' : 'More about ' + inputText}
-          </DrawerHeader>
-          <DrawerBody>
-            {actionType === 'memo' && (
-              <Textarea
-                placeholder={
-                  actionType === 'memo'
-                    ? 'Enter memo...'
-                    : 'Enter explanation...'
-                }
-                value={inputText}
-                onChange={(e) => setInputText(e.target.value)}
-                overflowY="auto"
-                h="50vh"
-                resize="none"
-              />
-            )}
-            {actionType === 'explain' && (
-              <VStack>
-                <Text fontSize="sm" color="gray.500">
-                  This will be sent to 4o-mini to generate more detailed
-                  explanation.
-                </Text>
-                <MessageHistory
-                  // exclude the system message @/and the prompt for "...について、もう少しだけ簡潔に説明してください。"
-                  messages={explainMessageDetails.slice(2)}
-                  streaming={explainIsLoading}
-                  streamingMessage={explainOutput}
-                  style={{
-                    hasBorder: false,
-                    canCollapse: false,
-                  }}
-                />
-              </VStack>
-            )}
-          </DrawerBody>
-          <DrawerFooter>
-            <Button
-              variant="outline"
-              mr={3}
-              onClick={() => setDrawerOpen(false)}
-            >
-              Cancel
-            </Button>
-            {
-              // only show delete button if the current selection is highlighted
-              currentSelection &&
-                highlightedPartInfo[currentSelection.msgId]?.[
-                  currentSelection.partId
-                ]?.find(
-                  (r) =>
-                    r.startOffset === currentSelection.startOffset &&
-                    r.endOffset === currentSelection.endOffset,
-                ) && (
-                  <Button colorScheme="red" mr={3} onClick={handleDrawerDelete}>
-                    Delete
-                  </Button>
-                )
-            }
-            <Button colorScheme="blue" onClick={handleDrawerSave}>
-              Save
-            </Button>
-          </DrawerFooter>
-        </DrawerContent>
-      </DrawerRoot>
-      <DrawerRoot
-        open={sidebarOpen}
-        onOpenChange={(e) => setSidebarOpen(e.open)}
-        placement="start"
-      >
-        <DrawerContent>
-          <DrawerHeader fontSize="md">History</DrawerHeader>
-          <DrawerBody>
-            <VStack
-              gap={2}
-              overflowX="hidden"
-              overflowY="auto"
-              _scrollbar={{
-                width: '10px',
-                background: '#000000',
-                backgroundColor: '#000000',
-              }}
-              _scrollbarTrack={{
-                backgroundColor: '#000000',
-              }}
-              _scrollbarThumb={{
-                backgroundColor: '#ffffff',
-              }}
-              pb={4}
-              mb={4}
-            >
-              <For
-                each={sessions}
-                fallback={<Text>No chat sessions found.</Text>}
-              >
-                {(item) => (
-                  <Button
-                    w="100%"
-                    h="30px"
-                    fontSize="md"
-                    mx={1}
-                    py={6}
-                    bgColor="white"
-                    borderRadius={10}
-                    _hover={{ bgColor: 'gray.100' }}
-                    color="black"
-                    key={item.id}
-                    onClick={() =>
-                      showSession(item.id)
-                        .then(() => {
-                          setChatSessionId(item.id);
-                        })
-                        .catch((err) => {
-                          alert(
-                            'Failed to load chat session data. please retry.',
-                          );
-                          console.error(err);
-                        })
-                    }
-                  >
-                    <HStack>
-                      <Text>{item.summary || 'Unnamed chat'}</Text>
-                      <Button
-                        size="xs"
-                        variant="ghost"
-                        onClick={(e) => {
-                          e.stopPropagation();
-                          e.preventDefault();
-                        }}
-                      ></Button>
-                    </HStack>
-                  </Button>
-                )}
-              </For>
-
-              {sessionsCursor != null ? (
-                <Button w="100%" onClick={loadMoreChatSessions}>
-                  Load More
-                </Button>
-              ) : (
-                <Text>No more chat sessions to load.</Text>
-              )}
-            </VStack>
-          </DrawerBody>
-        </DrawerContent>
-      </DrawerRoot>
+      <RightDrawer
+        drawerOpen={drawerOpen}
+        setDrawerOpen={setDrawerOpen}
+        actionType={actionType}
+        inputText={inputText}
+        setInputText={setInputText}
+        openai={explanationOpenai}
+        currentSelection={currentSelection}
+        highlightedPartInfo={highlightedPartInfo}
+        handleDrawerDelete={handleDrawerDelete}
+        handleDrawerSave={handleDrawerSave}
+      />
+      <LeftDrawer
+        sidebarOpen={sidebarOpen}
+        setSidebarOpen={setSidebarOpen}
+        sessions={sessions}
+        showSession={showSession}
+        loadMoreChatSessions={loadMoreChatSessions}
+        sessionsCursor={sessionsCursor}
+        setChatSessionId={setChatSessionId}
+      />
       {ContactDialog}
     </VStack>
   );
 };
 
 export default Main;
+
+interface MainChatPartProps {
+  containerRef: React.RefObject<HTMLDivElement>;
+  isTemporaryChatOpen: boolean;
+  mainOpenai: UseOpenaiReturn;
+  tempOpenai: UseOpenaiReturn;
+  highlightedPartInfo: HighlightedPartInfo;
+  onHighlightedClick: (
+    msgId: string,
+    partId: string,
+    range: HighlightRange,
+  ) => void;
+  renderPopover: (msgId: string, info: any, close: () => void) => JSX.Element;
+}
+
+export const MainChatPart: FC<MainChatPartProps> = (props) => {
+  const {
+    containerRef,
+    isTemporaryChatOpen,
+    mainOpenai,
+    tempOpenai,
+    highlightedPartInfo,
+    onHighlightedClick,
+    renderPopover,
+  } = props;
+
+  return (
+    <VStack
+      flex="1"
+      overflowY="auto"
+      overflowX="hidden"
+      w="100%"
+      pb={4}
+      minH="20vh"
+      ref={containerRef}
+      position="relative"
+    >
+      <Box w={{ base: '100%', md: '80%' }}>
+        <MessageHistory
+          openai={mainOpenai}
+          highlight={{
+            highlightedPartInfo: highlightedPartInfo,
+            onHighlightedClick: onHighlightedClick,
+            renderPopover: renderPopover,
+          }}
+          messagesToSlice={1}
+        />
+      </Box>
+      {isTemporaryChatOpen && (
+        <VStack
+          w="80%"
+          gap={2}
+          justify="space-between"
+          bgColor="blackAlpha.100"
+          flex="1"
+          borderTopRadius={20}
+          border="1"
+          justifyContent="start"
+        >
+          <VStack p={2} gap={0}>
+            <Text fontSize="1.5rem" textAlign="center">
+              Temporary Chat
+            </Text>
+            <Text fontSize="1.2rem" textAlign="center">
+              This conversation does not include any previous chat history and
+              will not be saved.
+            </Text>
+          </VStack>
+          <Box w="80%">
+            <MessageHistory
+              openai={tempOpenai}
+              highlight={{
+                highlightedPartInfo: highlightedPartInfo,
+                onHighlightedClick: onHighlightedClick,
+                renderPopover: renderPopover,
+              }}
+            />
+          </Box>
+        </VStack>
+      )}
+    </VStack>
+  );
+};
+// (prevProps, nextProps) => {
+//   return (
+//     prevProps.containerRef === nextProps.containerRef &&
+//     prevProps.highlightedPartInfo === nextProps.highlightedPartInfo &&
+//     prevProps.isTemporaryChatOpen === nextProps.isTemporaryChatOpen &&
+//     prevProps.mainOpenai === nextProps.mainOpenai &&
+//     prevProps.tempOpenai === nextProps.tempOpenai &&
+//     prevProps.highlightedPartInfo === nextProps.highlightedPartInfo
+//   );
+// },
