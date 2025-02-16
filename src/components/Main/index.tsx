@@ -420,7 +420,7 @@ const Main: FC = () => {
 
         setMemos(memos);
         setSupplementaryMessages(supplementaryMessages);
-        mainOpenai.setChatMessages(chatMessages);
+        mainOpenai.setMessageDetails(chatSessionData.messages);
       } else {
         console.error('Failed to load chat session data.');
       }
@@ -717,3 +717,13 @@ export const MainChatPart: FC<MainChatPartProps> = (props) => {
     </VStack>
   );
 };
+// (prevProps, nextProps) => {
+//   return (
+//     prevProps.containerRef === nextProps.containerRef &&
+//     prevProps.highlightedPartInfo === nextProps.highlightedPartInfo &&
+//     prevProps.isTemporaryChatOpen === nextProps.isTemporaryChatOpen &&
+//     prevProps.mainOpenai === nextProps.mainOpenai &&
+//     prevProps.tempOpenai === nextProps.tempOpenai &&
+//     prevProps.highlightedPartInfo === nextProps.highlightedPartInfo
+//   );
+// },

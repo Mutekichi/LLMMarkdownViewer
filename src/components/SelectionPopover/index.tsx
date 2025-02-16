@@ -44,7 +44,7 @@ export const SelectionPopover: FC<SelectionPopoverProps> = (props) => {
   } = props;
 
   return (
-    <HStack p={2} w="auto">
+    <HStack p={2} w="auto" bgColor="white" borderRadius={10}>
       <Tooltip
         content="Add memo"
         positioning={{ placement: 'bottom' }}

@@ -201,7 +201,10 @@ export const HighlightableElement: React.FC<HighlightableElementProps> = ({
   const [popoverInfo, setPopoverInfo] = React.useState<PopoverInfo | null>(
     null,
   );
-  const closePopover = () => setPopoverInfo(null);
+  const closePopover = () => {
+    console.log('closePopover');
+    setPopoverInfo(null);
+  };
 
   const sortedRanges = highlightRanges.sort(
     (a, b) => a.startOffset - b.startOffset,
@@ -327,7 +330,10 @@ export const HighlightableElement: React.FC<HighlightableElementProps> = ({
         >
           <PopoverRoot
             open
-            onOpenChange={closePopover}
+            onOpenChange={() => {
+              console.log('onOpenChange');
+              closePopover();
+            }}
             positioning={{ placement: 'bottom' }}
             size="sm"
           >
@@ -335,7 +341,15 @@ export const HighlightableElement: React.FC<HighlightableElementProps> = ({
               <Box position="absolute" width="1px" height="1px" />
             </PopoverTrigger>
             <PopoverContent asChild>
-              {renderPopover({ partId, ...popoverInfo }, closePopover)}
+              {renderPopover(
+                {
+                  partId,
+                  absoluteStart: popoverInfo.absoluteStart,
+                  absoluteEnd: popoverInfo.absoluteEnd,
+                  anchorRect: popoverInfo.anchorRect,
+                },
+                closePopover,
+              )}
             </PopoverContent>
           </PopoverRoot>
         </Box>

@@ -4,7 +4,7 @@ import { HighlightedParts, HighlightRange } from '@/hooks/useHighlight';
 import { ChevronDownIcon, ChevronUpIcon } from '@chakra-ui/icons';
 import { Box, Button, HStack, Icon } from '@chakra-ui/react';
 import { motion } from 'framer-motion';
-import { FC, memo, useState } from 'react';
+import { FC, useState } from 'react';
 
 export interface MessageStyle {
   hasBorder: boolean;
@@ -38,8 +38,7 @@ interface MessageProps {
 }
 
 const MotionBox = motion(Box);
-
-const MessageComponent: FC<MessageProps> = (props) => {
+export const Message: FC<MessageProps> = (props) => {
   const { message, bgColor, borderColor, highlight, style } = props;
 
   const [isCollapsed, setIsCollapsed] = useState(false);
@@ -102,5 +101,3 @@ const MessageComponent: FC<MessageProps> = (props) => {
     </HStack>
   );
 };
-
-export const Message = memo(MessageComponent);

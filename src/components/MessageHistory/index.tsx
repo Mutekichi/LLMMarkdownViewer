@@ -2,7 +2,7 @@ import { calculateCost } from '@/config/llm-models';
 import { HighlightedPartInfo, HighlightRange } from '@/hooks/useHighlight';
 import { MessageDetail, UseOpenaiReturn } from '@/hooks/useOpenai';
 import { Box, HStack, VStack } from '@chakra-ui/react';
-import { FC, memo } from 'react';
+import { FC } from 'react';
 import { Message, MessageStyle } from '../Message/index';
 interface MessageHistoryProps {
   openai: UseOpenaiReturn;
@@ -62,7 +62,7 @@ interface ResponseProps {
   };
 }
 
-const Response = memo<ResponseProps>((props) => {
+const Response: FC<ResponseProps> = (props) => {
   const { messageId, responseType, response, cost, style, highlight } = props;
 
   return (
@@ -104,9 +104,9 @@ const Response = memo<ResponseProps>((props) => {
       </Box>
     </HStack>
   );
-});
+};
 
-const PastMessages = memo<{
+const PastMessages: FC<{
   messages: MessageDetail[];
   highlight?: {
     highlightedPartInfo: { [messageId: string]: any };
@@ -123,7 +123,7 @@ const PastMessages = memo<{
   };
   style?: MessageStyle;
   hasBorder?: boolean;
-}>((props) => {
+}> = (props) => {
   const { messages, highlight, style } = props;
   return (
     <>
@@ -173,7 +173,7 @@ const PastMessages = memo<{
       ))}
     </>
   );
-});
+};
 
 export const MessageHistory: FC<MessageHistoryProps> = (props) => {
   const {
